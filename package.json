@@ -1,10 +1,10 @@
 {
   "name": "peertube-plugin-ezchat",
   "description": "A basic chat system.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "nuekaze",
-  "bugs": "",
-  "license": "",
+  "bugs": "https://github.com/nuekaze/peertube-plugin-ezchat/issues",
+  "license": "GPLv3",
   "clientScripts": [
     {
       "script": "dist/main.js",
@@ -19,7 +19,7 @@
   "engine": {
     "peertube": ">=6.2.1"
   },
-  "homepage": "https://nuemedia.se/chatplugin",
+  "homepage": "https://github.com/nuekaze/peertube-plugin-ezchat",
   "keywords": [
     "peertube",
     "plugin"
