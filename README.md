@@ -13,7 +13,6 @@ My goal with this project was to create a frictionless, viewer focused, chat fea
 
 ## Todo
 - Make the UI look better.
-- Make logged in users persistent over restarts.
 - Add moderation capabilities. Timeout and ban.
 - Allow Twitch accounts to authenticate with OAuth.
 - Add custom emotes.

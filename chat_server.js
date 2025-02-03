@@ -3,7 +3,20 @@ const crypto = require("crypto");
 
 const rooms = {};
 const otpChecks = {};
-const users = {};
+let users = {};
+
+async function initChat(storageManager)
+{
+  users = await storageManager.getData("ezchat_users");
+
+  if (!users)
+    users = {};
+}
+
+async function saveChatState(storageManager)
+{
+  await storageManager.storeData("ezchat_users", users);
+}
 
 // This disaster of code was LLM translated from Python to JavaScript 
 // because I wrote the entire thing in Python at first.
@@ -133,6 +146,8 @@ function addUser(user, token)
 
 module.exports = {
   onConnection,
-  addUser
+  addUser,
+  initChat,
+  saveChatState
 };
 

@@ -12,6 +12,13 @@ async function register({
   const serverActor = await peertubeHelpers.server.getServerActor();
   const serverUrl = await peertubeHelpers.config.getWebserverUrl();
 
+  await chat.initChat(storageManager);
+
+  // Store chat state every 10 minutes.
+  setInterval(async () => {
+    await chat.saveChatState(storageManager);
+  }, 1000 * 60 * 10);
+
   // Add route for generating token.
   const router = getRouter();
   router.get('/token', async (req, res) => {
@@ -50,9 +57,7 @@ async function register({
   });
 }
 
-async function unregister() {
-
-}
+async function unregister() { }
 
 module.exports = {
   register,
