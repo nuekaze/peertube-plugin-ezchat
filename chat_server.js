@@ -30,7 +30,7 @@ function onConnection(ws, serverActor, serverUrl, logger) {
     const { room } = m;
 
     if (!rooms[room]) {
-      rooms[room] = { clients: new Set(), users: [] };
+      rooms[room] = { clients: new Set(), users: [], owner: "", mods: []};
     }
 
     if (m.type === 'MESSAGE') {
@@ -41,7 +41,18 @@ function onConnection(ws, serverActor, serverUrl, logger) {
           actor: users[m.token].actor,
           display_name: users[m.token].display_name,
           content: m.content,
+          isOwner: false,
+          isMod: false
         };
+
+        if (rooms[room].owner == m.token)
+        {
+          r.isOwner = true;
+        }
+        if (rooms[room].mods.includes(m.token))
+        {
+          r.isMod = true;
+        }
 
         rooms[room].clients.forEach((c) => c.send(JSON.stringify(r)));
       }
@@ -132,22 +143,40 @@ function onConnection(ws, serverActor, serverUrl, logger) {
   });
 }
 
-function addUser(user, token)
+function addUser(user, url, token)
 {
   if (!(token in users))
   {
     users[token] = {
-      display_name: user.Account.name,
-      actor: user.Account.Actor.url,
+      display_name: user,
+      actor: url,
       color: "#" + token.substring(0, 6)
     };
   }
+}
+
+function addModToRoom(token, room, isMod, isOwner)
+{
+  if (!rooms[room]) {
+    rooms[room] = { clients: new Set(), users: [], owner: "", mods: []};
+  }
+  
+  if (isOwner)
+  {
+    rooms[room].owner = token;
+
+    if (!rooms[room].mods.includes(token))
+      rooms[room].mods.push(token);
+  }
+  if (isMod && !rooms[room].mods.includes(token))
+    rooms[room].mods.push(token);
 }
 
 module.exports = {
   onConnection,
   addUser,
   initChat,
-  saveChatState
+  saveChatState,
+  addModToRoom
 };
 

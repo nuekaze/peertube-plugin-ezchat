@@ -1,6 +1,6 @@
 import { main_html } from "./html.js";
 
-async function launchChat(video, placeholder, user, token, chat_server)
+async function launchChat(video, placeholder, user, token, baseroute, settings, chat_server)
 {
     // We only show chat for livestreams.
     if (!video.isLive)
@@ -22,7 +22,7 @@ async function launchChat(video, placeholder, user, token, chat_server)
     // Set up Websocket connection.
     const ws = new WebSocket(chat_server);
     ws.onopen = () => {
-        console.log("Connected to room " + video["shortUUID"]);
+        console.log("Connected to room " + video.uuid);
     };
 
     // Process new messages.
@@ -31,31 +31,34 @@ async function launchChat(video, placeholder, user, token, chat_server)
         const data = JSON.parse(event.data);
         const message = document.createElement("div");
         const username = document.createElement("a");
+        const badge = document.createElement("span");
 
-        if (data["type"] == "AUTH_INIT")
+        if (data.type == "AUTH_INIT")
         {
-            if (data["status"] == 0)
+            if (data.status == 0)
             {
-                window.localStorage.setItem("peertubePluginChatToken", data["token"]);
+                window.localStorage.setItem("peertubePluginChatToken", data.token);
                 message.textContent = "System: Recieved token. Waiting for OTP code.";
                 document.getElementById("peertube-plugin-chat-auth-fedi-code-area").style = "display: block;";
             }
             else
             {
-                message.textContent = "System: " + data["message"];
+                message.textContent = "System: " + data.message;
                 document.getElementById("peertube-plugin-chat-auth-fedi-get-code").disabled = false;
                 document.getElementById("peertube-plugin-chat-auth-fedi-code-area").style = "display: none;";
+                document.getElementById("peertube-plugin-chat-auth-alternatives").style = "display: block;";
+                document.getElementById("peertube-plugin-chat-auth-fedi-module").style = "display: none;";
             }
         }
-        else if (data["type"] == "AUTH_VERIFY")
+        else if (data.type == "AUTH_VERIFY")
         {
-            if (data["status"] == 0)
+            if (data.status == 0)
             {
                 message.textContent = "System: User was successfully authenticated. Joining chat.";
                 window.localStorage.setItem("peertubePluginChatIsAuthenticated", 1);
                 ws.send(JSON.stringify({
                     "type": "JOIN",
-                    "room": video["shortUUID"],
+                    "room": video.uuid,
                     "token": window.localStorage.getItem("peertubePluginChatToken")
                 }));
                 document.getElementById("peertube-plugin-chat-auth-area").style = "display: none;";
@@ -67,18 +70,20 @@ async function launchChat(video, placeholder, user, token, chat_server)
                 document.getElementById("peertube-plugin-chat-auth-fedi-get-code").disabled = false;
                 document.getElementById("peertube-plugin-chat-auth-fedi-validate-code").disabled = false;
                 window.localStorage.removeItem("peertubePluginChatToken");
-                message.textContent = "System: " + data["message"];
+                message.textContent = "System: " + data.message;
+                document.getElementById("peertube-plugin-chat-auth-alternatives").style = "display: block;";
+                document.getElementById("peertube-plugin-chat-auth-fedi-module").style = "display: none;";
             }
         }
-        else if (data["type"] == "JOIN")
+        else if (data.type == "JOIN")
         {
-            if (data["status"] == 0)
+            if (data.status == 0)
             {
-                if (data["is_authenticated"] == 1)
+                if (data.is_authenticated == 1)
                 {
-                    document.getElementById("peertube-plugin-chat-display-name").value = data["display_name"];
-                    document.getElementById("peertube-plugin-chat-color").value = data["color"];
-                    message.textContent = "Welcome " + data["display_name"] + "!";
+                    document.getElementById("peertube-plugin-chat-display-name").value = data.display_name;
+                    document.getElementById("peertube-plugin-chat-color").value = data.color;
+                    message.textContent = "Welcome " + data.display_name + "!";
                 }
                 else
                 {
@@ -88,23 +93,29 @@ async function launchChat(video, placeholder, user, token, chat_server)
                 }
             }
             else
-                message.textContent = "System: " + data["message"];
+                message.textContent = "System: " + data.message;
         }
-        else if (data["type"] == "UPDATE_SETTINGS")
+        else if (data.type == "UPDATE_SETTINGS")
         {
-            if (data["status"] == 0)
+            if (data.status == 0)
                 message.textContent = "System: Updated.";
             else
-                message.textContent = "System: " + data["message"];
+                message.textContent = "System: " + data.message;
         }
-        else if (data["type"] == "MESSAGE")
+        else if (data.type == "MESSAGE")
         {
-            username.href = data["actor"];
-            username.style = "text-decoration: none; color: " + data["color"] + ";";
-            username.textContent = data["display_name"];
+            username.href = data.actor;
+            username.style = "text-decoration: none; color: " + data.color + ";";
+            username.textContent = data.display_name;
+
+            if (data.isOwner)
+                badge.textContent = "🎥 ";
+            else if (data.isMod)
+                badge.textContent = "🔨 ";
 
             message.appendChild(username);
-            username.after(": " + data["content"]);
+            username.after(": " + data.content);
+            username.before(badge);
         }
 
         chatbox.appendChild(message);
@@ -119,7 +130,7 @@ async function launchChat(video, placeholder, user, token, chat_server)
             window.localStorage.setItem("peertubePluginChatToken", token);
             ws.send(JSON.stringify({
                 "type": "JOIN",
-                "room": video["shortUUID"],
+                "room": video.uuid,
                 "token": token
             }));
             document.getElementById("peertube-plugin-chat-auth-area").style = "display: none;";
@@ -131,7 +142,7 @@ async function launchChat(video, placeholder, user, token, chat_server)
         {
             ws.send(JSON.stringify({
                 "type": "JOIN",
-                "room": video["shortUUID"],
+                "room": video.uuid,
                 "token": window.localStorage.getItem("peertubePluginChatToken")
             }));
             document.getElementById("peertube-plugin-chat-auth-area").style = "display: none;";
@@ -143,11 +154,11 @@ async function launchChat(video, placeholder, user, token, chat_server)
         {
             ws.send(JSON.stringify({
                 "type": "JOIN",
-                "room": video["shortUUID"],
+                "room": video.uuid,
                 "token": ""
             }));
         }
-    }
+    };
 
     // Sending message handler.
     function sendMessage()
@@ -155,12 +166,12 @@ async function launchChat(video, placeholder, user, token, chat_server)
         const input = document.getElementById("peertube-plugin-chat-message-input");
         ws.send(JSON.stringify({
             "type": "MESSAGE",
-            "room": video["shortUUID"],
+            "room": video.uuid,
             "token": window.localStorage.getItem("peertubePluginChatToken"),
             "content": input.value
         }));
         input.value = "";
-    };
+    }
 
     // Update settings handler.
     function updateSettings()
@@ -169,12 +180,12 @@ async function launchChat(video, placeholder, user, token, chat_server)
         const color = document.getElementById("peertube-plugin-chat-color");
         ws.send(JSON.stringify({
             "type": "UPDATE_SETTINGS",
-            "room": video["shortUUID"],
+            "room": video.uuid,
             "token": window.localStorage.getItem("peertubePluginChatToken"),
             "display_name": display_name.value,
             "color": color.value
         }));
-    };
+    }
 
     // Sending message hooks.
     document.getElementById("peertube-plugin-chat-message-send").addEventListener("click", sendMessage);
@@ -193,11 +204,53 @@ async function launchChat(video, placeholder, user, token, chat_server)
             settings_area.style.display = "none";
     });
 
+    document.getElementById("peertube-plugin-chat-log-out").addEventListener("click", () => {
+        window.localStorage.setItem("peertubePluginChatToken", "");
+        window.localStorage.setItem("peertubePluginChatIsAuthenticated", 0);
+        window.location.reload();
+    });
+
+    // Auth area hooks.
+    document.getElementById("peertube-plugin-chat-auth-fedi").addEventListener("click", () => {
+        document.getElementById("peertube-plugin-chat-auth-alternatives").style.display = "none";
+        document.getElementById("peertube-plugin-chat-auth-fedi-module").style.display = "block";
+    });
+    
+    document.getElementById("peertube-plugin-chat-auth-twitch").addEventListener("click", () => {
+        document.getElementById("peertube-plugin-chat-auth-fedi").disabled = true;
+        document.getElementById("peertube-plugin-chat-auth-twitch").disabled = true;
+        //document.getElementById("peertube-plugin-chat-auth-youtube").disabled = true;
+        //document.getElementById("peertube-plugin-chat-auth-x").disabled = true;
+
+        // Open call to Twitch API
+        window.location.href = baseroute + "/auth/twitch";
+    });
+
+//    document.getElementById("peertube-plugin-chat-auth-youtube").addEventListener("click", () => {
+//        document.getElementById("peertube-plugin-chat-auth-fedi").disabled = true;
+//        document.getElementById("peertube-plugin-chat-auth-twitch").disabled = true;
+//        document.getElementById("peertube-plugin-chat-auth-youtube").disabled = true;
+//        document.getElementById("peertube-plugin-chat-auth-x").disabled = true;
+//
+//        // Open call to Twitch API
+//        window.location.href = baseroute + "/auth/youtube";
+//    });
+//
+//    document.getElementById("peertube-plugin-chat-auth-x").addEventListener("click", () => {
+//        document.getElementById("peertube-plugin-chat-auth-fedi").disabled = true;
+//        document.getElementById("peertube-plugin-chat-auth-twitch").disabled = true;
+//        document.getElementById("peertube-plugin-chat-auth-youtube").disabled = true;
+//        document.getElementById("peertube-plugin-chat-auth-x").disabled = true;
+//
+//        // Open call to X API
+//        window.location.href = baseroute + "/auth/x";
+//    });
+
     // Fediverse auth hooks.
     document.getElementById("peertube-plugin-chat-auth-fedi-get-code").addEventListener("click", () => {
         ws.send(JSON.stringify({
             "type": "AUTH_INIT",
-            "room": video["shortUUID"],
+            "room": video.uuid,
             "user_address": document.getElementById("peertube-plugin-chat-auth-fedi-user-address").value
         }));
         document.getElementById("peertube-plugin-chat-auth-fedi-get-code").disabled = true;
@@ -206,7 +259,7 @@ async function launchChat(video, placeholder, user, token, chat_server)
     document.getElementById("peertube-plugin-chat-auth-fedi-validate-code").addEventListener("click", () => {
         ws.send(JSON.stringify({
             "type": "AUTH_VERIFY",
-            "room": video["shortUUID"],
+            "room": video.uuid,
             "token": window.localStorage.getItem("peertubePluginChatToken"),
             "code": document.getElementById("peertube-plugin-chat-auth-fedi-code").value
         }));
@@ -217,4 +270,4 @@ async function launchChat(video, placeholder, user, token, chat_server)
 export
 {
     launchChat
-}
+};
