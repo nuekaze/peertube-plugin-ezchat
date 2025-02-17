@@ -36,4 +36,4 @@ const main_html = `<div id="peertube-plugin-chat-messages"></div>
 export
 {
     main_html
-}
+};

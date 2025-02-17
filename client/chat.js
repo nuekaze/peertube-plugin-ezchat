@@ -19,6 +19,10 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     // Apply the container.
     placeholder.append(chat_container);
 
+    // Disable unavailable auth alternatives.
+    if (!settings.twitchClientId)
+        document.getElementById("peertube-plugin-chat-auth-twitch").style.display = "none";
+
     // Set up Websocket connection.
     const ws = new WebSocket(chat_server);
     ws.onopen = () => {
