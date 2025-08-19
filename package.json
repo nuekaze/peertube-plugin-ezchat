@@ -1,7 +1,7 @@
 {
   "name": "peertube-plugin-ezchat",
   "description": "A Twitch-like chat plugin for PeerTube livestreams.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "nuekaze",
   "bugs": "https://github.com/nuekaze/peertube-plugin-ezchat/issues",
   "license": "GPLv3",
@@ -36,6 +36,7 @@
     "jshint": "^2.13.6"
   },
   "dependencies": {
+    "@peertube/peertube-cli": "^1.0.3",
     "axios": "^1.7.9",
     "ws": "^8.18.0"
   }

@@ -29,6 +29,13 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
         console.log("Connected to room " + video.uuid);
     };
 
+    ws.onclose = () => {
+        console.log("Closed connection to room " + video.uuid);
+    };
+
+    // Keepalive ping to webswocket
+    setInterval(() => {ws.send('{"type": "PING"}')}, 30000);
+
     // Process new messages.
     const chatbox = document.getElementById("peertube-plugin-chat-messages");
     ws.onmessage = (event) => {
@@ -194,7 +201,7 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     // Sending message hooks.
     document.getElementById("peertube-plugin-chat-message-send").addEventListener("click", sendMessage);
     document.getElementById("peertube-plugin-chat-message-input").addEventListener("keypress", () => {
-        if (event.key == "Enter")
+        if (event.key == "Enter" && document.getElementById("peertube-plugin-chat-message-input").value != "")
             document.getElementById("peertube-plugin-chat-message-send").click();
     });
 

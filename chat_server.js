@@ -26,7 +26,7 @@ async function saveChatState(storageManager)
 function onConnection(ws, serverActor, serverUrl, logger) {
   ws.on('message', async (message) => {
     const m = JSON.parse(message);
-    logger.info(JSON.stringify(m, null, 2));
+    logger.debug(JSON.stringify(m, null, 2));
     const { room } = m;
 
     if (!rooms[room]) {
