@@ -1,20 +1,12 @@
 import { launchChat } from "./chat.js";
 import { mountEmoteManager } from "./emote_manager.js";
 
-function register ({ registerHook, registerSettingsScript, registerClientRoute, peertubeHelpers })
+function register ({ registerHook, registerClientRoute, peertubeHelpers })
 {
     registerClientRoute({
         route: "ezchat/emote-manager",
         title: "EZChat Emote Manager",
         onMount: ({ rootEl }) => mountEmoteManager(rootEl, peertubeHelpers)
-    });
-
-    registerSettingsScript({
-        isSettingHidden: ({ setting }) => {
-            if (setting.name !== "emoteManager") return false;
-            const user = peertubeHelpers.getUser();
-            return !user || user.role !== 0;
-        }
     });
 
     registerHook({

@@ -12,6 +12,7 @@ if (fs.existsSync('client/emote_manager.js')) {
 assert.match(server, /href="\/p\/ezchat\/emote-manager"/);
 assert.match(client, /registerClientRoute/);
 assert.match(client, /route: "ezchat\/emote-manager"/);
+assert.doesNotMatch(client, /isSettingHidden/);
 assert.match(manager, /getAuthHeader/);
 assert.match(manager, /\/admin\/emotes/);
 assert.match(manager, /Choose files/);

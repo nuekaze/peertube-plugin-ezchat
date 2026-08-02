@@ -11,7 +11,7 @@ Provide one reliable entry point for editing custom chat emotes. Instance admini
 - Keep the existing `Emote Manager` HTML setting in `main.js`.
 - The setting links to the authenticated PeerTube client route `/p/ezchat/emote-manager`.
 - The client route calls the server API at the dynamic `/admin/emotes` plugin router URL with `peertubeHelpers.getAuthHeader()`.
-- Remove the chat cogwheel Emote Manager link and its client-side visibility logic.
+- Remove the chat cogwheel Emote Manager link and its client-side admin-link logic.
 - Authenticate manager requests using the normal PeerTube browser session through `peertubeHelpers.user.getAuthUser(res)`.
 - Require the PeerTube instance administrator role, not moderator or video-owner privileges.
 - Remove the chat-token query fallback from the manager authorization path.
@@ -24,7 +24,7 @@ Provide one reliable entry point for editing custom chat emotes. Instance admini
 ## Settings Visibility and Errors
 
 - Do not use `private` as a UI visibility mechanism; PeerTube uses it for setting-value exposure.
-- The manager link is exposed through the plugin settings page, which is the supported administrator entry point.
+- The manager link is exposed through the PeerTube plugin settings page, which is the supported administrator entry point.
 - Unauthorized manager API requests return JSON `403` responses stating that administrator access is required.
 - The 403 response must not instruct users to authenticate through chat or retry with a token.
 - Unauthorized write requests continue returning JSON `403` responses.

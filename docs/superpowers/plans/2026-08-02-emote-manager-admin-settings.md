@@ -124,43 +124,23 @@ Expected: esbuild completes successfully and regenerates `dist/main.js`.
 ### Task 3: Add Authenticated Client Manager Route
 
 **Files:**
-- Modify: `client/main.js:3-65` (register the settings visibility script)
+- Modify: `client/main.js:3-65` (register the client manager route)
 - Modify: `main.js:251-255` (point the HTML setting to the client route)
 - Create: `client/emote_manager.js` (render the manager and call the API with auth headers)
 
 **Interfaces:**
 - The client registration continues using the existing `register({ registerHook, peertubeHelpers })` entry point.
-- It additionally calls `registerClientRoute({ route: "ezchat/emote-manager", onMount })` and `registerSettingsScript({ isSettingHidden })`.
+- It additionally calls `registerClientRoute({ route: "ezchat/emote-manager", onMount })`.
 
-- [ ] **Step 1: Register client-side visibility filtering**
-
-Extend the client register signature and add this before the existing video hook registration:
-
-```js
-function register ({ registerHook, registerSettingsScript, peertubeHelpers })
-{
-    registerSettingsScript({
-        isSettingHidden: ({ setting }) => {
-            if (setting.name !== "emoteManager") return false;
-            const user = peertubeHelpers.getUser();
-            return !user || user.role !== 0;
-        }
-    });
-
-    registerHook({
-```
-
-The existing `registerHook` body remains unchanged. This hides the manager setting from users who can reach the plugin settings UI but are not administrators; server authorization remains mandatory.
-
-- [ ] **Step 2: Register the authenticated client route**
+- [ ] **Step 1: Register the authenticated client route**
 
 Register the route with `registerClientRoute` and mount the manager UI from `client/emote_manager.js`. Every API request must pass `peertubeHelpers.getAuthHeader()` to the server routes. Normalize `peertubeHelpers.getBaseRouterRoute()` with `.replace(/\/+$/, '')` before appending `/admin/emotes` so URLs never contain a double slash.
 
-- [ ] **Step 3: Preserve the server setting as the sole link**
+- [ ] **Step 2: Preserve the server setting as the sole link**
 
 Keep the existing setting in `main.js` with `descriptionHTML` pointing to `/p/ezchat/emote-manager` and `private: false`. Do not add a second link or a chat token to `descriptionHTML`.
 
-- [ ] **Step 4: Run client lint and build checks**
+- [ ] **Step 3: Run client lint and build checks**
 
 Run: `npm run build && npx jshint client/main.js client/chat.js client/html.js main.js chat_server.js`
 
