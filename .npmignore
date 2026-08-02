@@ -1,0 +1,24 @@
+# Ignore everything by default
+*
+
+# Include built files
+!dist/
+!dist/**
+
+# Include source files needed at runtime
+!main.js
+!activity_pub.js
+!chat_server.js
+
+# Include client source (for reference, not needed at runtime)
+!client/
+!client/**
+
+# Include assets
+!assets/
+!assets/**
+
+# Include docs
+!package.json
+!README.md
+!LICENSE
