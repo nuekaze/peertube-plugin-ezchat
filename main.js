@@ -364,6 +364,14 @@ async function register({
   // Register and start the chat server.
   chat.createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, peertubeHelpers.logger, () => emoteMap);
 
+  registerSetting({
+    name: 'emoteManager',
+    label: 'Emote Manager',
+    type: 'html',
+    descriptionHTML: '<a href="' + baseroute + '/admin/emotes" target="_blank">Open Emote Manager</a> — Upload and manage custom chat emotes.',
+    private: false
+  });
+
   // Twitch auth
   registerSetting({
     name: 'twitchClientId',
