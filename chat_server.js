@@ -93,6 +93,7 @@ function onConnection(ws, serverActor, serverUrl, logger) {
 
         // Update reverse lookup
         rooms[room].tokenByActor[actor] = m.token;
+        ws.token = m.token;
 
         rooms[room].clients.forEach((c) => c.send(JSON.stringify(r)));
       }
@@ -101,6 +102,11 @@ function onConnection(ws, serverActor, serverUrl, logger) {
 
       if (!rooms[room].users.includes(m.token)) {
         rooms[room].users.push(m.token);
+      }
+
+      ws.token = m.token;
+      if (users[m.token]) {
+        rooms[room].tokenByActor[users[m.token].actor] = m.token;
       }
 
       const r = { type: 'JOIN', status: 0 };
@@ -170,6 +176,154 @@ function onConnection(ws, serverActor, serverUrl, logger) {
         logger.error(e.message);
         ws.send(JSON.stringify({ type: 'AUTH_INIT', status: 1, message: 'Not a valid username.' }));
       }
+    } else if (m.type === 'DELETE_MESSAGE') {
+      if (!users[m.token]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not authenticated.' }));
+        return;
+      }
+      const isOwner = rooms[room].owner == m.token;
+      const isMod = rooms[room].mods.includes(m.token);
+      if (!isOwner && !isMod) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not a moderator.' }));
+        return;
+      }
+      const idx = rooms[room].messages.findIndex(msg => msg.id === m.messageId);
+      if (idx === -1) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Message not found.' }));
+        return;
+      }
+      rooms[room].messages.splice(idx, 1);
+      rooms[room].clients.forEach((c) => c.send(JSON.stringify({
+        type: 'MESSAGE_DELETED',
+        messageId: m.messageId
+      })));
+    } else if (m.type === 'TIMEOUT_USER') {
+      if (!users[m.token]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not authenticated.' }));
+        return;
+      }
+      const isOwner = rooms[room].owner == m.token;
+      const isMod = rooms[room].mods.includes(m.token);
+      if (!isOwner && !isMod) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not a moderator.' }));
+        return;
+      }
+      if (rooms[room].owner === rooms[room].tokenByActor[m.targetActor]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Cannot timeout the owner.' }));
+        return;
+      }
+      const targetToken = rooms[room].tokenByActor[m.targetActor];
+      if (!targetToken) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'User not found in this room.' }));
+        return;
+      }
+      if (m.duration === 0) {
+        delete rooms[room].timeouts[m.targetActor];
+      } else {
+        rooms[room].timeouts[m.targetActor] = Date.now() + m.duration * 1000;
+      }
+      // Force-close the target's connection if present
+      for (const client of rooms[room].clients) {
+        if (client.token === targetToken) {
+          client.close();
+          break;
+        }
+      }
+      rooms[room].clients.forEach((c) => c.send(JSON.stringify({
+        type: 'USER_TIMEOUTED',
+        actor: m.targetActor,
+        duration: m.duration
+      })));
+    } else if (m.type === 'BAN_USER') {
+      if (!users[m.token]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not authenticated.' }));
+        return;
+      }
+      const isOwner = rooms[room].owner == m.token;
+      const isMod = rooms[room].mods.includes(m.token);
+      if (!isOwner && !isMod) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not a moderator.' }));
+        return;
+      }
+      if (rooms[room].owner === rooms[room].tokenByActor[m.targetActor]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Cannot ban the owner.' }));
+        return;
+      }
+      const targetToken = rooms[room].tokenByActor[m.targetActor];
+      if (!targetToken) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'User not found in this room.' }));
+        return;
+      }
+      if (!rooms[room].banned.includes(m.targetActor)) {
+        rooms[room].banned.push(m.targetActor);
+      }
+      // Force-close the target's connection
+      for (const client of rooms[room].clients) {
+        if (client.token === targetToken) {
+          client.close();
+          break;
+        }
+      }
+      rooms[room].clients.forEach((c) => c.send(JSON.stringify({
+        type: 'USER_BANNED',
+        actor: m.targetActor
+      })));
+    } else if (m.type === 'UNBAN_USER') {
+      if (!users[m.token]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not authenticated.' }));
+        return;
+      }
+      const isOwner = rooms[room].owner == m.token;
+      const isMod = rooms[room].mods.includes(m.token);
+      if (!isOwner && !isMod) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not a moderator.' }));
+        return;
+      }
+      rooms[room].banned = rooms[room].banned.filter(a => a !== m.targetActor);
+      rooms[room].clients.forEach((c) => c.send(JSON.stringify({
+        type: 'USER_UNBANNED',
+        actor: m.targetActor
+      })));
+    } else if (m.type === 'MOD_USER') {
+      if (!users[m.token]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not authenticated.' }));
+        return;
+      }
+      if (rooms[room].owner !== m.token) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Only the owner can assign mods.' }));
+        return;
+      }
+      const targetToken = rooms[room].tokenByActor[m.targetActor];
+      if (!targetToken) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'User not found in this room.' }));
+        return;
+      }
+      if (!rooms[room].mods.includes(targetToken)) {
+        rooms[room].mods.push(targetToken);
+      }
+      rooms[room].clients.forEach((c) => c.send(JSON.stringify({
+        type: 'MOD_ASSIGNED',
+        actor: m.targetActor
+      })));
+    } else if (m.type === 'UNMOD_USER') {
+      if (!users[m.token]) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Not authenticated.' }));
+        return;
+      }
+      if (rooms[room].owner !== m.token) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'Only the owner can unmod users.' }));
+        return;
+      }
+      const targetToken = rooms[room].tokenByActor[m.targetActor];
+      if (!targetToken) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: 'User not found in this room.' }));
+        return;
+      }
+      rooms[room].mods = rooms[room].mods.filter(t => t !== targetToken);
+      rooms[room].clients.forEach((c) => c.send(JSON.stringify({
+        type: 'MOD_UNASSIGNED',
+        actor: m.targetActor
+      })));
     }
   });
 
