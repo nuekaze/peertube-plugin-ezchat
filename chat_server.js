@@ -29,7 +29,7 @@ async function saveChatState(storageManager)
   const bansMap = {};
   for (const [roomId, roomData] of Object.entries(rooms)) {
     if (roomData.banned.length > 0) {
-      bansMap[roomId] = { banned: roomData.banned };
+      bansMap[roomId] = roomData.banned;
     }
   }
   await storageManager.storeData("ezchat_bans", bansMap);
