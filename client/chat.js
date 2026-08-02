@@ -39,6 +39,10 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     if (!settings.twitchClientId)
         el.authTwitch.style.display = "none";
 
+    let isLocalMod = false;
+    let isLocalOwner = false;
+    let localActor = "";
+
     const ws = new WebSocket(chat_server);
 
     ws.onclose = () => {
