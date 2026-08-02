@@ -154,8 +154,11 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
             else if (data.isMod)
                 badge.textContent = "🔨 ";
 
+            message.appendChild(badge);
             message.appendChild(username);
-            username.after(": ");
+
+            message.appendChild(document.createTextNode(": "));
+
             const escaped = data.content
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
@@ -164,8 +167,10 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
                 const filename = emoteMap[code];
                 return filename ? `<img src="${emoteImageBase}/${filename}" class="peertube-plugin-chat-emote" title="${code}" alt=":${code}:" />` : match;
             });
-            username.insertAdjacentHTML("afterend", rendered);
-            username.before(badge);
+
+            const contentFragment = document.createElement("span");
+            contentFragment.innerHTML = rendered;
+            message.appendChild(contentFragment);
 
             const localToken = window.localStorage.getItem("peertubePluginChatToken");
 
