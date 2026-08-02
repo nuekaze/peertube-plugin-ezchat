@@ -370,7 +370,7 @@ async function register({
 
     try
     {
-      const data = (await peertubeHelpers.database.query("SELECT * FROM \"videoChannel\" WHERE id = $1", { replacements: [video.channelId] }))[0][0];
+      const data = (await peertubeHelpers.database.query("SELECT * FROM \"videoChannel\" WHERE id = $1", { bind: [video.channelId] }))[0][0];
       if (user.Account.id == data.accountId)
       {
         chat.addModToRoom(req.query.token, video.uuid, true, true);
