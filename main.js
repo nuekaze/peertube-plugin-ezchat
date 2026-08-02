@@ -338,8 +338,10 @@ async function register({
 
   router.get('/setprivs', async (req, res) => {
     const user = await peertubeHelpers.user.getAuthUser(res);
-    if (!user)
+    if (!user) {
+      res.status(401).json({ error: 'Not authenticated' });
       return;
+    }
 
     const video = await peertubeHelpers.videos.loadByIdOrUUID(req.query.id);
 
@@ -350,10 +352,12 @@ async function register({
       {
         chat.addModToRoom(req.query.token, video.uuid, true, true);
       }
+      res.json({ status: 'ok' });
     }
     catch (error)
     {
       peertubeHelpers.logger.error(error);
+      res.status(500).json({ error: 'Failed to set privileges' });
     }
   });
 

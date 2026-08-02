@@ -40,12 +40,10 @@ function register ({ registerHook, peertubeHelpers })
                 headers: peertubeHelpers.getAuthHeader()
             }).then(res => res.json()).then(data => {
 
-                fetch(peertubeHelpers.getBaseRouterRoute() + '/setprivs?id=' + video.id + "&token=" + data.token, {
+                return fetch(peertubeHelpers.getBaseRouterRoute() + '/setprivs?id=' + video.id + "&token=" + data.token, {
                     method: "GET",
                     headers: peertubeHelpers.getAuthHeader()
-                });
-
-                peertubeHelpers.getSettings().then(settings => {
+                }).then(() => peertubeHelpers.getSettings()).then(settings => {
                     launchChat(
                         video, 
                         placeholder, 
