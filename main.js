@@ -79,10 +79,21 @@ async function register({
   async function isAdminUser(req, res) {
     try {
       const user = await peertubeHelpers.user.getAuthUser(res);
-      return user && user.role >= 2;
-    } catch {
-      return false;
+      if (user && user.role >= 2) return true;
+    } catch {}
+
+    // Fallback: check chat token from query parameter
+    const chatToken = req.query.token;
+    if (chatToken) {
+      const chatUser = chat.getUserByToken(chatToken);
+      if (chatUser && chatUser.peerTubeUserId) {
+        try {
+          const user = await peertubeHelpers.user.loadById(chatUser.peerTubeUserId);
+          return user && user.role >= 2;
+        } catch {}
+      }
     }
+    return false;
   }
 
   await chat.initChat(storageManager);
@@ -101,7 +112,7 @@ async function register({
     if (user)
     {
       const token = crypto.createHash('sha256').update(user.username + serverActor.privateKey).digest('hex');
-      chat.addUser(user.Account.name, user.Account.Actor.url, token);
+      chat.addUser(user.Account.name, user.Account.Actor.url, token, user.id);
 
       res.json({
         token: token
@@ -178,6 +189,8 @@ async function register({
   </form>
 
   <script>
+  const chatToken = new URLSearchParams(window.location.search).get('token') || '';
+  const tokenParam = chatToken ? '?token=' + encodeURIComponent(chatToken) : '';
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const messages = document.getElementById('messages');
@@ -196,7 +209,7 @@ async function register({
   function uploadFiles(files) {
     const formData = new FormData();
     for (const f of files) formData.append('emotes', f);
-    fetch('upload', { method: 'POST', body: formData })
+    fetch('upload' + tokenParam, { method: 'POST', body: formData })
       .then(r => r.json())
       .then(data => {
         if (data.error) { showMessage(data.error, 'error'); return; }
@@ -217,7 +230,7 @@ async function register({
   tbody.addEventListener('click', (e) => {
     if (e.target.classList.contains('delete-emote')) {
       const filename = e.target.dataset.filename;
-      fetch('delete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({filename}) })
+      fetch('delete' + tokenParam, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({filename}) })
         .then(r => r.json())
         .then(data => {
           if (data.error) { showMessage(data.error, 'error'); return; }
@@ -236,7 +249,7 @@ async function register({
       const code = input.value.trim();
       if (code) emotes.push({ code, filename: input.dataset.filename });
     });
-    fetch('save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({emotes}) })
+    fetch('save' + tokenParam, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({emotes}) })
       .then(r => r.json())
       .then(data => {
         if (data.error) { showMessage(data.error, 'error'); return; }
@@ -363,14 +376,6 @@ async function register({
 
   // Register and start the chat server.
   chat.createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, peertubeHelpers.logger, () => emoteMap);
-
-  registerSetting({
-    name: 'emoteManager',
-    label: 'Emote Manager',
-    type: 'html',
-    descriptionHTML: '<a href="' + baseroute + '/admin/emotes" target="_blank">Open Emote Manager</a> — Upload and manage custom chat emotes.',
-    private: false
-  });
 
   // Twitch auth
   registerSetting({

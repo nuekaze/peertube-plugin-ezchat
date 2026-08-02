@@ -34,6 +34,8 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
         toggleSettings: document.getElementById("peertube-plugin-chat-toggle-settings"),
         settingsArea: document.getElementById("peertube-plugin-chat-settings-area"),
         logOut: document.getElementById("peertube-plugin-chat-log-out"),
+        adminLinks: document.getElementById("peertube-plugin-chat-admin-links"),
+        emoteManagerLink: document.getElementById("peertube-plugin-chat-emote-manager-link"),
     };
 
     if (!settings.twitchClientId)
@@ -53,6 +55,14 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     let emotePickerVisible = false;
     let emotePickerSelectedIndex = -1;
     let emotePickerResults = [];
+
+    function showAdminLinks() {
+        if (isLocalMod || isLocalOwner) {
+            const chatToken = window.localStorage.getItem("peertubePluginChatToken") || "";
+            el.emoteManagerLink.href = baseroute + "/admin/emotes?token=" + encodeURIComponent(chatToken);
+            el.adminLinks.style.display = "block";
+        }
+    }
 
     const ws = new WebSocket(chat_server);
 
@@ -123,6 +133,7 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
                     if (data.actor) localActor = data.actor;
                     if (data.isMod) isLocalMod = true;
                     if (data.isOwner) isLocalOwner = true;
+                    showAdminLinks();
                 }
                 else
                 {
