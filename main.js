@@ -46,10 +46,29 @@ async function register({
       }
     }),
     fileFilter: (req, file, cb) => {
-      const allowed = ['.png', '.gif', '.webp'];
+      const allowedExts = ['.png', '.gif', '.webp'];
       const ext = path.extname(file.originalname).toLowerCase();
-      if (!allowed.includes(ext)) {
+      if (!allowedExts.includes(ext)) {
         cb(new Error('Only PNG, GIF, and WebP files are allowed.'));
+        return;
+      }
+      // Magic byte validation (first 4 bytes)
+      const fd = require('fs').openSync(file.path, 'r');
+      const buf = Buffer.alloc(4);
+      require('fs').readSync(fd, buf, 0, 4, 0);
+      require('fs').closeSync(fd);
+
+      const sig = Array.from(buf);
+      const magicBytes = {
+        '.png': [0x89, 0x50, 0x4E, 0x47],
+        '.gif': [0x47, 0x49, 0x46, 0x38],
+        '.webp': [0x52, 0x49, 0x46, 0x46]
+      };
+      const expected = magicBytes[ext];
+      if (!expected || !expected.every((b, i) => sig[i] === b)) {
+        // Clean up the temp file
+        try { require('fs').unlinkSync(file.path); } catch {}
+        cb(new Error('File content does not match its extension.'));
         return;
       }
       cb(null, true);
@@ -227,8 +246,9 @@ async function register({
   });
 
   function showMessage(msg, type) {
-    messages.innerHTML = '<p class="' + type + '">' + msg + '</p>';
-    setTimeout(() => messages.innerHTML = '', 3000);
+    var safeMsg = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    messages.innerHTML = '<p class="' + type + '">' + safeMsg + '</p>';
+    setTimeout(function() { messages.innerHTML = ''; }, 3000);
   }
   </script>
 </body></html>`);
