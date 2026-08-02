@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const rooms = {};
 const otpChecks = {};
 let users = {};
+let bans = {};
 
 async function initChat(storageManager)
 {
@@ -12,11 +13,26 @@ async function initChat(storageManager)
 
   if (!users)
     users = {};
+
+  const savedBans = await storageManager.getData("ezchat_bans");
+  if (savedBans) {
+    bans = savedBans;
+  } else {
+    bans = {};
+  }
 }
 
 async function saveChatState(storageManager)
 {
   await storageManager.storeData("ezchat_users", users);
+
+  const bansMap = {};
+  for (const [roomId, roomData] of Object.entries(rooms)) {
+    if (roomData.banned.length > 0) {
+      bansMap[roomId] = { banned: roomData.banned };
+    }
+  }
+  await storageManager.storeData("ezchat_bans", bansMap);
 }
 
 
@@ -37,7 +53,7 @@ function onConnection(ws, serverActor, serverUrl, logger) {
         messages: [],
         tokenByActor: {},
         timeouts: {},
-        banned: []
+        banned: bans[room] || []
       };
     }
 
@@ -382,7 +398,7 @@ function addModToRoom(token, room, isMod, isOwner)
       messages: [],
       tokenByActor: {},
       timeouts: {},
-      banned: []
+      banned: bans[room] || []
     };
   }
   
