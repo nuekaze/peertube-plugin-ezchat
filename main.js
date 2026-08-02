@@ -36,6 +36,21 @@ async function register({
     emoteMap = storedEmotes;
   }
 
+  function hasValidImageMagic(filePath, ext) {
+    const magicBytes = {
+      '.png': [0x89, 0x50, 0x4E, 0x47],
+      '.gif': [0x47, 0x49, 0x46, 0x38],
+      '.webp': [0x52, 0x49, 0x46, 0x46]
+    };
+    try {
+      const signature = Array.from(fs.readFileSync(filePath).subarray(0, 4));
+      const expected = magicBytes[ext];
+      return Boolean(expected && expected.every((byte, index) => signature[index] === byte));
+    } catch {
+      return false;
+    }
+  }
+
   const emoteUpload = multer({
     storage: multer.diskStorage({
       destination: emotesDir,
@@ -50,25 +65,6 @@ async function register({
       const ext = path.extname(file.originalname).toLowerCase();
       if (!allowedExts.includes(ext)) {
         cb(new Error('Only PNG, GIF, and WebP files are allowed.'));
-        return;
-      }
-      // Magic byte validation (first 4 bytes)
-      const fd = require('fs').openSync(file.path, 'r');
-      const buf = Buffer.alloc(4);
-      require('fs').readSync(fd, buf, 0, 4, 0);
-      require('fs').closeSync(fd);
-
-      const sig = Array.from(buf);
-      const magicBytes = {
-        '.png': [0x89, 0x50, 0x4E, 0x47],
-        '.gif': [0x47, 0x49, 0x46, 0x38],
-        '.webp': [0x52, 0x49, 0x46, 0x46]
-      };
-      const expected = magicBytes[ext];
-      if (!expected || !expected.every((b, i) => sig[i] === b)) {
-        // Clean up the temp file
-        try { require('fs').unlinkSync(file.path); } catch {}
-        cb(new Error('File content does not match its extension.'));
         return;
       }
       cb(null, true);
@@ -149,6 +145,17 @@ async function register({
       }
       if (!req.files || req.files.length === 0) {
         res.status(400).json({ error: 'No files uploaded.' });
+        return;
+      }
+      const invalidFile = req.files.find(file => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        return !hasValidImageMagic(file.path, ext);
+      });
+      if (invalidFile) {
+        req.files.forEach(file => {
+          try { fs.unlinkSync(file.path); } catch {}
+        });
+        res.status(400).json({ error: `File content does not match its extension: ${invalidFile.originalname}` });
         return;
       }
       const files = req.files.map(f => ({

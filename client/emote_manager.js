@@ -41,6 +41,15 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
         return peertubeHelpers.getAuthHeader() || {};
     }
 
+    async function responseJson(response, action) {
+        const body = await response.text();
+        try {
+            return JSON.parse(body);
+        } catch {
+            throw new Error(action + ' failed (' + response.status + ').');
+        }
+    }
+
     function showMessage(text, type) {
         messages.textContent = text;
         messages.className = 'ezchat-emote-manager-messages ' + type;
@@ -78,7 +87,7 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
     async function loadEmotes() {
         const response = await fetch(apiBase, { headers: headers() });
         if (!response.ok) throw new Error('Failed to load emotes (' + response.status + ').');
-        const data = await response.json();
+        const data = await responseJson(response, 'Loading emotes');
         renderRows(data.emotes || {});
     }
 
@@ -91,7 +100,7 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
             headers: headers(),
             body: formData
         });
-        const data = await response.json();
+        const data = await responseJson(response, 'Uploading files');
         if (!response.ok || data.error) throw new Error(data.error || 'Upload failed.');
         data.files.forEach(file => {
             const row = document.createElement('tr');
@@ -145,7 +154,7 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
                 headers: { ...headers(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ filename })
             });
-            const data = await response.json();
+            const data = await responseJson(response, 'Deleting emote');
             if (!response.ok || data.error) throw new Error(data.error || 'Delete failed.');
             event.target.closest('tr').remove();
             if (!tbody.querySelector('.emote-code')) renderRows({});
@@ -168,7 +177,7 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
                 headers: { ...headers(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ emotes })
             });
-            const data = await response.json();
+            const data = await responseJson(response, 'Saving emotes');
             if (!response.ok || data.error) throw new Error(data.error || 'Save failed.');
             showMessage('Emotes saved!', 'success');
         } catch (error) {
