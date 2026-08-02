@@ -131,6 +131,9 @@ function onConnection(ws, serverActor, serverUrl, logger) {
         r.is_authenticated = 1;
         r.display_name = users[m.token].display_name;
         r.color = users[m.token].color;
+        r.actor = users[m.token].actor;
+        r.isOwner = rooms[room].owner === m.token;
+        r.isMod = rooms[room].mods.includes(m.token);
       } else {
         r.is_authenticated = 0;
       }

@@ -108,6 +108,9 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
                     el.displayName.value = data.display_name;
                     el.color.value = data.color;
                     message.textContent = "Welcome " + data.display_name + "!";
+                    if (data.actor) localActor = data.actor;
+                    if (data.isMod) isLocalMod = true;
+                    if (data.isOwner) isLocalOwner = true;
                 }
                 else
                 {
@@ -142,6 +145,35 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
             message.appendChild(username);
             username.after(": " + data.content);
             username.before(badge);
+
+            const localToken = window.localStorage.getItem("peertubePluginChatToken");
+
+            if (isLocalMod || isLocalOwner)
+            {
+                const delBtn = document.createElement("button");
+                delBtn.textContent = "✕";
+                delBtn.className = "peertube-plugin-chat-delete-btn";
+                delBtn.title = "Delete message";
+                delBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    ws.send(JSON.stringify({
+                        type: "DELETE_MESSAGE",
+                        room: video.uuid,
+                        token: localToken,
+                        messageId: data.messageId
+                    }));
+                });
+                message.appendChild(delBtn);
+            }
+
+            if ((isLocalMod || isLocalOwner) && data.actor !== localActor) {
+                username.style.cursor = "pointer";
+                username.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showUserPopup(e, data.actor, ws, video.uuid, localToken, isLocalOwner);
+                });
+            }
         }
         else if (data.type == "MESSAGE_DELETED")
         {
@@ -220,6 +252,81 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
             }));
         }
     };
+
+    function showUserPopup(event, actor, ws, room, token, isOwner) {
+        const existing = document.getElementById("peertube-plugin-chat-user-popup");
+        if (existing) existing.remove();
+
+        const popup = document.createElement("div");
+        popup.id = "peertube-plugin-chat-user-popup";
+        popup.style.position = "absolute";
+        popup.style.left = event.clientX + "px";
+        popup.style.top = event.clientY + "px";
+        popup.style.background = "var(--mainBackgroundColor, #222)";
+        popup.style.border = "1px solid #555";
+        popup.style.borderRadius = "4px";
+        popup.style.padding = "4px";
+        popup.style.zIndex = "1000";
+
+        const items = [
+            { label: "Timeout 10m", action: () => sendModAction(ws, "TIMEOUT_USER", room, token, actor, 600) },
+            { label: "Timeout 1h", action: () => sendModAction(ws, "TIMEOUT_USER", room, token, actor, 3600) },
+            { label: "Timeout 24h", action: () => sendModAction(ws, "TIMEOUT_USER", room, token, actor, 86400) },
+            { label: "Ban", action: () => sendModAction(ws, "BAN_USER", room, token, actor) },
+        ];
+
+        if (isOwner) {
+            items.push({ label: "Mod", action: () => sendModAction(ws, "MOD_USER", room, token, actor) });
+            items.push({ label: "Unmod", action: () => sendModAction(ws, "UNMOD_USER", room, token, actor) });
+        }
+
+        items.push({ label: "Cancel", action: () => {} });
+
+        items.forEach(item => {
+            const btn = document.createElement("button");
+            btn.textContent = item.label;
+            btn.style.display = "block";
+            btn.style.width = "100%";
+            btn.style.background = "none";
+            btn.style.border = "none";
+            btn.style.color = "var(--mainForegroundColor, #fff)";
+            btn.style.padding = "4px 8px";
+            btn.style.textAlign = "left";
+            btn.style.cursor = "pointer";
+            btn.addEventListener("mouseenter", () => { btn.style.background = "#444"; });
+            btn.addEventListener("mouseleave", () => { btn.style.background = "none"; });
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                item.action();
+                popup.remove();
+            });
+            popup.appendChild(btn);
+        });
+
+        document.body.appendChild(popup);
+
+        setTimeout(() => {
+            document.addEventListener("click", closePopup);
+        }, 0);
+
+        function closePopup(e) {
+            if (!popup.contains(e.target)) {
+                popup.remove();
+                document.removeEventListener("click", closePopup);
+            }
+        }
+    }
+
+    function sendModAction(ws, type, room, token, targetActor, duration) {
+        const payload = {
+            type: type,
+            room: room,
+            token: token,
+            targetActor: targetActor
+        };
+        if (duration !== undefined) payload.duration = duration;
+        ws.send(JSON.stringify(payload));
+    }
 
     function sendMessage()
     {

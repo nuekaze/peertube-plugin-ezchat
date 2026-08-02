@@ -17,6 +17,20 @@
     bottom: 0;
 }
 
+.peertube-plugin-chat-delete-btn {
+    float: right;
+    background: none;
+    border: none;
+    color: #f00;
+    cursor: pointer;
+    display: none;
+    font-size: 0.8em;
+    padding: 0 4px;
+}
+#peertube-plugin-chat-messages > div:hover .peertube-plugin-chat-delete-btn {
+    display: inline;
+}
+
 .peertube-plugin-chat-system {
     font-style: italic;
     opacity: 0.7;
