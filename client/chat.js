@@ -57,10 +57,15 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     let emotePickerResults = [];
 
     function showAdminLinks() {
+        console.log("[EZChat] showAdminLinks called, isLocalMod:", isLocalMod, "isLocalOwner:", isLocalOwner);
+        console.log("[EZChat] adminLinks element:", el.adminLinks, "emoteManagerLink element:", el.emoteManagerLink);
         if (isLocalMod || isLocalOwner) {
             const chatToken = window.localStorage.getItem("peertubePluginChatToken") || "";
             el.emoteManagerLink.href = baseroute + "/admin/emotes?token=" + encodeURIComponent(chatToken);
             el.adminLinks.style.display = "block";
+            console.log("[EZChat] adminLinks display set to block");
+        } else {
+            console.log("[EZChat] not showing admin links - not mod or owner");
         }
     }
 
