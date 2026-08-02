@@ -15,6 +15,8 @@ assert.match(client, /route: "ezchat\/emote-manager"/);
 assert.match(manager, /getAuthHeader/);
 assert.match(manager, /\/admin\/emotes/);
 assert.match(manager, /Choose files/);
+assert.match(manager, /Upload files/);
+assert.match(manager, /pendingFiles/);
 assert.match(manager, /class="btn btn-primary/);
 assert.match(styles, /\.ezchat-emote-manager/);
 assert.match(styles, /--mainBackgroundColor/);

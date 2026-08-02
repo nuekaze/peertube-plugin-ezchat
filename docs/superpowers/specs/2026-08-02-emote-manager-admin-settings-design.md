@@ -44,6 +44,8 @@ No emote-manager operation depends on the WebSocket connection, room ownership, 
 
 - Use PeerTube-native theme variables and existing `btn`/`form-control` classes.
 - Provide a visible `Choose files` button in addition to drag-and-drop.
+- Queue selected files until an explicit `Upload files` action is pressed.
+- Keep `Save Emotes` focused on saving edited emote names after upload.
 - Display selected-file status and accepted file constraints near the upload control.
 - Keep the emote table readable with theme-aware borders, spacing, previews, and explicit Delete buttons.
 

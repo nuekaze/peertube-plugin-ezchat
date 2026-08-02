@@ -12,6 +12,7 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
                 <strong>Drop image files here</strong>
                 <span>or</span>
                 <button type="button" class="btn btn-primary ezchat-emote-manager-choose">Choose files</button>
+                <button type="button" class="btn ezchat-emote-manager-upload" disabled>Upload files</button>
                 <small>PNG, GIF, or WebP. Maximum 1 MB per file.</small>
             </div>
             <input type="file" class="ezchat-emote-manager-file-input" multiple accept=".png,.gif,.webp" hidden />
@@ -29,10 +30,12 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
     const messages = rootEl.querySelector('.ezchat-emote-manager-messages');
     const dropZone = rootEl.querySelector('.ezchat-emote-manager-drop-zone');
     const chooseButton = rootEl.querySelector('.ezchat-emote-manager-choose');
+    const uploadButton = rootEl.querySelector('.ezchat-emote-manager-upload');
     const fileInput = rootEl.querySelector('.ezchat-emote-manager-file-input');
     const fileStatus = rootEl.querySelector('.ezchat-emote-manager-file-status');
     const form = rootEl.querySelector('.ezchat-emote-manager-form');
     const tbody = rootEl.querySelector('.ezchat-emote-manager-table');
+    let pendingFiles = [];
 
     function headers() {
         return peertubeHelpers.getAuthHeader() || {};
@@ -45,8 +48,9 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
 
     function selectFiles(files) {
         if (!files.length) return;
-        fileStatus.textContent = files.length + ' file(s) selected';
-        uploadFiles(files).catch(error => showMessage(error.message, 'error'));
+        pendingFiles = Array.from(files);
+        fileStatus.textContent = pendingFiles.length + ' file(s) selected. Click Upload files.';
+        uploadButton.disabled = false;
     }
 
     function imageUrl(filename) {
@@ -78,9 +82,10 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
         renderRows(data.emotes || {});
     }
 
-    async function uploadFiles(files) {
+    async function uploadFiles() {
+        if (!pendingFiles.length) return;
         const formData = new FormData();
-        Array.from(files).forEach(file => formData.append('emotes', file));
+        pendingFiles.forEach(file => formData.append('emotes', file));
         const response = await fetch(apiBase + '/upload', {
             method: 'POST',
             headers: headers(),
@@ -102,12 +107,20 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
             tbody.appendChild(row);
         });
         showMessage('Uploaded ' + data.files.length + ' file(s). Assign names and click Save.', 'success');
+        pendingFiles = [];
+        fileInput.value = '';
+        uploadButton.disabled = true;
+        fileStatus.textContent = '';
     }
 
     dropZone.addEventListener('click', () => fileInput.click());
     chooseButton.addEventListener('click', event => {
         event.stopPropagation();
         fileInput.click();
+    });
+    uploadButton.addEventListener('click', event => {
+        event.stopPropagation();
+        uploadFiles().catch(error => showMessage(error.message, 'error'));
     });
     dropZone.addEventListener('dragover', event => {
         event.preventDefault();
