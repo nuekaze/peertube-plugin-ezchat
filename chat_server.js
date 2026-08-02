@@ -27,9 +27,9 @@ async function saveChatState(storageManager)
   await storageManager.storeData("ezchat_users", users);
 
   const bansMap = {};
-  for (const [roomId, roomData] of Object.entries(rooms)) {
-    if (roomData.banned.length > 0) {
-      bansMap[roomId] = roomData.banned;
+  for (const [roomId, bannedList] of Object.entries(bans)) {
+    if (bannedList.length > 0) {
+      bansMap[roomId] = bannedList;
     }
   }
   await storageManager.storeData("ezchat_bans", bansMap);
@@ -53,7 +53,7 @@ function onConnection(ws, serverActor, serverUrl, logger) {
         messages: [],
         tokenByActor: {},
         timeouts: {},
-        banned: bans[room] || []
+        banned: bans[room] || (bans[room] = [])
       };
     }
 
@@ -236,10 +236,11 @@ function onConnection(ws, serverActor, serverUrl, logger) {
         ws.send(JSON.stringify({ type: 'ERROR', message: 'User not found in this room.' }));
         return;
       }
-      if (m.duration === 0) {
+      const duration = Math.max(0, Math.min(Math.floor(Number(m.duration)) || 0, 315360000));
+      if (duration === 0) {
         delete rooms[room].timeouts[m.targetActor];
       } else {
-        rooms[room].timeouts[m.targetActor] = Date.now() + m.duration * 1000;
+        rooms[room].timeouts[m.targetActor] = Date.now() + duration * 1000;
       }
       // Force-close the target's connection if present
       for (const client of rooms[room].clients) {
@@ -401,7 +402,7 @@ function addModToRoom(token, room, isMod, isOwner)
       messages: [],
       tokenByActor: {},
       timeouts: {},
-      banned: bans[room] || []
+      banned: bans[room] || (bans[room] = [])
     };
   }
   

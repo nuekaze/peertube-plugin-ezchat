@@ -177,7 +177,8 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
         }
         else if (data.type == "MESSAGE_DELETED")
         {
-            const msgEl = el.messages.querySelector('[data-message-id="' + data.messageId + '"]');
+            const mid = String(data.messageId).replace(/[\\"]/g, '\\$&');
+            const msgEl = el.messages.querySelector('[data-message-id="' + mid + '"]');
             if (msgEl) msgEl.remove();
             return;
         }
