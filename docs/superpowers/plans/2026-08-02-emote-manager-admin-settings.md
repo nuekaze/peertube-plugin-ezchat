@@ -4,7 +4,7 @@
 
 **Goal:** Make the EZChat Emote Manager available only through plugin settings to PeerTube instance administrators, with all manager routes protected by the same administrator-session check.
 
-**Architecture:** The server remains the source of truth for authorization. The plugin settings page supplies the only link, the browser’s PeerTube session authenticates requests, and the manager routes reject every non-administrator request. Chat room ownership, moderation state, WebSocket state, and chat tokens are removed from the emote-manager flow.
+**Architecture:** The server remains the source of truth for authorization. The plugin settings page supplies the only link to a PeerTube client route, which calls the emote API with `peertubeHelpers.getAuthHeader()`. The manager routes reject every non-administrator request. Chat room ownership, moderation state, WebSocket state, and chat tokens are removed from the emote-manager flow.
 
 **Tech Stack:** CommonJS PeerTube plugin server, vanilla JavaScript client bundle, Express router supplied by PeerTube, esbuild, JSHint.
 
@@ -30,7 +30,7 @@
 **Interfaces:**
 - `isAdminUser(req, res)` remains the single internal authorization helper and returns a `Promise<boolean>`.
 - It authenticates only with `peertubeHelpers.user.getAuthUser(res)` and returns true only when `user.role === 0`, the PeerTube `ADMINISTRATOR` role used by this PeerTube version.
-- The four manager routes continue using `await isAdminUser(req, res)` before rendering or mutating data.
+- The four manager routes continue using `await isAdminUser(req, res)` before returning data or mutating state.
 
 - [ ] **Step 1: Update the authorization helper to use only the PeerTube session**
 
@@ -121,15 +121,16 @@ Run: `npm run build`
 
 Expected: esbuild completes successfully and regenerates `dist/main.js`.
 
-### Task 3: Hide the Setting for Non-Administrators
+### Task 3: Add Authenticated Client Manager Route
 
 **Files:**
 - Modify: `client/main.js:3-65` (register the settings visibility script)
-- Modify: `main.js:390-396` (keep the HTML setting and its dynamic URL)
+- Modify: `main.js:251-255` (point the HTML setting to the client route)
+- Create: `client/emote_manager.js` (render the manager and call the API with auth headers)
 
 **Interfaces:**
 - The client registration continues using the existing `register({ registerHook, peertubeHelpers })` entry point.
-- It additionally calls `registerSettingsScript({ isSettingHidden })` for the `emoteManager` setting.
+- It additionally calls `registerClientRoute({ route: "ezchat/emote-manager", onMount })` and `registerSettingsScript({ isSettingHidden })`.
 
 - [ ] **Step 1: Register client-side visibility filtering**
 
@@ -151,11 +152,15 @@ function register ({ registerHook, registerSettingsScript, peertubeHelpers })
 
 The existing `registerHook` body remains unchanged. This hides the manager setting from users who can reach the plugin settings UI but are not administrators; server authorization remains mandatory.
 
-- [ ] **Step 2: Preserve the server setting as the sole link**
+- [ ] **Step 2: Register the authenticated client route**
 
-Keep the existing setting in `main.js` with its dynamic `baseroute` URL and `private: false`. Do not add a second link or a chat token to `descriptionHTML`.
+Register the route with `registerClientRoute` and mount the manager UI from `client/emote_manager.js`. Every API request must pass `peertubeHelpers.getAuthHeader()` to the server routes. Normalize `peertubeHelpers.getBaseRouterRoute()` with `.replace(/\/+$/, '')` before appending `/admin/emotes` so URLs never contain a double slash.
 
-- [ ] **Step 3: Run client lint and build checks**
+- [ ] **Step 3: Preserve the server setting as the sole link**
+
+Keep the existing setting in `main.js` with `descriptionHTML` pointing to `/p/ezchat/emote-manager` and `private: false`. Do not add a second link or a chat token to `descriptionHTML`.
+
+- [ ] **Step 4: Run client lint and build checks**
 
 Run: `npm run build && npx jshint client/main.js client/chat.js client/html.js main.js chat_server.js`
 
@@ -186,7 +191,7 @@ Expected: build succeeds and the search returns no matches.
 
 - [ ] **Step 3: Perform the manual authorization matrix on a PeerTube instance**
 
-Use the plugin settings URL and the manager URL directly:
+Use the plugin settings URL and the `/p/ezchat/emote-manager` client route:
 
 | Actor | Settings visibility | `GET /admin/emotes` | Upload/save/delete |
 |---|---|---|---|

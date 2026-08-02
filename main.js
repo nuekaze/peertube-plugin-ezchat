@@ -128,133 +128,13 @@ async function register({
     fs.createReadStream(filePath).pipe(res);
   });
 
-  // Admin: list and manage emotes
+  // Admin: provide emote data to the authenticated client manager
   router.get('/admin/emotes', async (req, res) => {
     if (!(await isAdminUser(req, res))) {
-      res.status(403).send(`<!DOCTYPE html><html><head><title>Forbidden</title></head><body>
-<h1>Forbidden</h1>
-<p>Instance administrator access required.</p>
-</body></html>`);
+      res.status(403).json({ error: 'Instance administrator access required.' });
       return;
     }
-
-    let rows = '';
-    for (const [code, filename] of Object.entries(emoteMap)) {
-      const previewUrl = `${baseroute}/emotes/${filename}`;
-      rows += `<tr>
-      <td><img src="${previewUrl}" style="height:32px;width:32px;object-fit:contain" /></td>
-      <td><input type="text" class="emote-code" value="${code}" data-filename="${filename}" /></td>
-      <td><button class="delete-emote" data-filename="${filename}">✕</button></td>
-    </tr>`;
-    }
-
-    res.send(`<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>EZChat Emote Manager</title>
-<style>
-  body { font-family: sans-serif; max-width: 800px; margin: 2em auto; padding: 0 1em; }
-  table { width: 100%; border-collapse: collapse; margin: 1em 0; }
-  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-  th { background: #f5f5f5; }
-  .emote-code { width: 200px; }
-  .success { color: green; }
-  .error { color: red; }
-  #drop-zone { border: 2px dashed #ccc; padding: 2em; text-align: center; margin: 1em 0; cursor: pointer; }
-  #drop-zone.dragover { border-color: #66f; background: #eef; }
-</style></head>
-<body>
-  <h1>EZChat Emote Manager</h1>
-
-  <div id="messages"></div>
-
-  <h2>Upload Emotes</h2>
-  <div id="drop-zone">Drop images here or click to select</div>
-  <input type="file" id="file-input" multiple accept=".png,.gif,.webp" style="display:none" />
-
-  <h2>Emotes</h2>
-  <form id="emote-form">
-  <table>
-    <thead><tr><th>Preview</th><th>Code Name</th><th>Action</th></tr></thead>
-    <tbody id="emote-table">${rows || '<tr><td colspan="3">No emotes yet. Upload some above.</td></tr>'}</tbody>
-  </table>
-  <button type="submit">Save Emotes</button>
-  </form>
-
-  <script>
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('file-input');
-  const messages = document.getElementById('messages');
-  const tbody = document.getElementById('emote-table');
-
-  dropZone.addEventListener('click', () => fileInput.click());
-  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
-  });
-  fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFiles(fileInput.files); });
-
-  function uploadFiles(files) {
-    const formData = new FormData();
-    for (const f of files) formData.append('emotes', f);
-    fetch('${baseroute}/admin/emotes/upload', { method: 'POST', body: formData })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { showMessage(data.error, 'error'); return; }
-        for (const f of data.files) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td><img src="${baseroute}/emotes/' + f.filename + '" style="height:32px;width:32px;object-fit:contain" /></td>'
-            + '<td><input type="text" class="emote-code" value="' + f.name + '" data-filename="' + f.filename + '" /></td>'
-            + '<td><button class="delete-emote" data-filename="' + f.filename + '">✕</button></td>';
-          const placeholder = tbody.querySelector('td[colspan]');
-          if (placeholder) tbody.innerHTML = '';
-          tbody.appendChild(tr);
-        }
-        showMessage('Uploaded ' + data.files.length + ' file(s). Assign names and click Save.', 'success');
-      })
-      .catch(e => showMessage('Upload failed: ' + e.message, 'error'));
-  }
-
-  tbody.addEventListener('click', (e) => {
-    if (e.target.classList.contains('delete-emote')) {
-      const filename = e.target.dataset.filename;
-      fetch('${baseroute}/admin/emotes/delete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({filename}) })
-        .then(r => r.json())
-        .then(data => {
-          if (data.error) { showMessage(data.error, 'error'); return; }
-          e.target.closest('tr').remove();
-          if (!tbody.querySelector('tr')) tbody.innerHTML = '<tr><td colspan="3">No emotes yet.</td></tr>';
-          showMessage('Emote deleted.', 'success');
-        })
-        .catch(e => showMessage('Delete failed: ' + e.message, 'error'));
-    }
-  });
-
-  document.getElementById('emote-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const emotes = [];
-    tbody.querySelectorAll('.emote-code').forEach(input => {
-      const code = input.value.trim();
-      if (code) emotes.push({ code, filename: input.dataset.filename });
-    });
-    fetch('${baseroute}/admin/emotes/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({emotes}) })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { showMessage(data.error, 'error'); return; }
-        showMessage('Emotes saved!', 'success');
-      })
-      .catch(e => showMessage('Save failed: ' + e.message, 'error'));
-  });
-
-  function showMessage(msg, type) {
-    var safeMsg = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    messages.innerHTML = '<p class="' + type + '">' + safeMsg + '</p>';
-    setTimeout(function() { messages.innerHTML = ''; }, 3000);
-  }
-  </script>
-</body></html>`);
+    res.json({ emotes: emoteMap });
   });
 
   router.post('/admin/emotes/upload', async (req, res) => {
@@ -371,7 +251,7 @@ async function register({
     name: 'emoteManager',
     label: 'Emote Manager',
     type: 'html',
-    descriptionHTML: '<a href="' + baseroute + '/admin/emotes" target="_blank">Open Emote Manager</a> — Upload and manage custom chat emotes. For instance administrators.',
+    descriptionHTML: '<a href="/p/ezchat/emote-manager">Open Emote Manager</a> — Upload and manage custom chat emotes. For instance administrators.',
     private: false
   });
 
