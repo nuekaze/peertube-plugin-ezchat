@@ -1,3 +1,4 @@
+const WebSocket = require('ws');
 const sendOtpMessage = require('./activity_pub.js');
 const crypto = require("crypto");
 
@@ -18,10 +19,7 @@ async function saveChatState(storageManager)
   await storageManager.storeData("ezchat_users", users);
 }
 
-// This disaster of code was LLM translated from Python to JavaScript 
-// because I wrote the entire thing in Python at first.
-// Then I wanted to make it completely standalone but did not want to write
-// it all over again. Also I don't know JavaScript very well.
+
 
 function onConnection(ws, serverActor, serverUrl, logger) {
   ws.on('message', async (message) => {
@@ -93,7 +91,7 @@ function onConnection(ws, serverActor, serverUrl, logger) {
       }
     } else if (m.type === 'AUTH_INIT') {
       try {
-        const userAddress = m.user_address.trim('@');
+        const userAddress = m.user_address.replace(/^@+|@+$/g, '');
         const [userName, userServer] = userAddress.split('@');
 
         const token = crypto.createHash('sha256').update(userAddress + serverActor.privateKey).digest('hex');
@@ -137,6 +135,9 @@ function onConnection(ws, serverActor, serverUrl, logger) {
     for (const [room, data] of Object.entries(rooms)) {
       if (data.clients.has(ws)) {
         data.clients.delete(ws);
+        if (data.clients.size === 0) {
+          delete rooms[room];
+        }
         break;
       }
     }
@@ -153,6 +154,24 @@ function addUser(user, url, token)
       color: "#" + token.substring(0, 6)
     };
   }
+}
+
+function createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, logger) {
+  const wss = new WebSocket.Server({ noServer: true });
+  wss.on('connection', (ws) => {
+    onConnection(ws, serverActor, serverUrl, logger);
+  });
+
+  registerWebSocketRoute({
+    route: '/connect',
+    handler: (request, socket, head) => {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    },
+  });
+
+  return wss;
 }
 
 function addModToRoom(token, room, isMod, isOwner)
@@ -177,6 +196,7 @@ module.exports = {
   addUser,
   initChat,
   saveChatState,
-  addModToRoom
+  addModToRoom,
+  createWebSocketServer
 };
 

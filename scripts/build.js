@@ -10,7 +10,7 @@ const configs = clientFiles.map(f => ({
   bundle: true,
   minify: true,
   format: 'esm',
-  target: 'safari11',
+  target: 'es2017',
   outfile: path.resolve(__dirname, '..', 'dist', f),
 }));
 

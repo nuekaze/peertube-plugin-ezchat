@@ -1,9 +1,6 @@
-const WebSocket = require('ws');
 const crypto = require('crypto');
 const axios = require("axios");
 const chat = require('./chat_server.js');
-const { stringify } = require('querystring');
-
 // OID Configs
 let twitch = null;
 let youtube = null;
@@ -61,11 +58,10 @@ async function register({
       return;
 
     const video = await peertubeHelpers.videos.loadByIdOrUUID(req.query.id);
-    console.log(video);
 
     try
     {
-      const data = (await peertubeHelpers.database.query("SELECT * FROM \"videoChannel\" WHERE id = " + video.channelId + ";"))[0][0];
+      const data = (await peertubeHelpers.database.query("SELECT * FROM \"videoChannel\" WHERE id = $1", { replacements: [video.channelId] }))[0][0];
       if (user.Account.id == data.accountId)
       {
         chat.addModToRoom(req.query.token, video.uuid, true, true);
@@ -73,24 +69,12 @@ async function register({
     }
     catch (error)
     {
-      console.log(error);
+      peertubeHelpers.logger.error(error);
     }
   });
 
   // Register and start the chat server.
-  const wss = new WebSocket.Server({ noServer: true });
-  wss.on('connection', (ws) => {
-    chat.onConnection(ws, serverActor, serverUrl, peertubeHelpers.logger);
-  });
-
-  registerWebSocketRoute({
-    route: '/connect',
-    handler: (request, socket, head) => {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
-    },
-  });
+  chat.createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, peertubeHelpers.logger);
 
   // Twitch auth
   registerSetting({
@@ -146,10 +130,54 @@ async function register({
 //    private: true
 //  });
 
+  // Auth provider configuration
+  const authProviders = {
+    twitch: {
+      enabled: true,
+      name: 'Twitch',
+      authUrl: 'https://id.twitch.tv/oauth2/authorize',
+      tokenUrl: 'https://id.twitch.tv/oauth2/token',
+      userInfoUrl: 'https://id.twitch.tv/oauth2/userinfo',
+      userApiUrl: 'https://api.twitch.tv/helix/users',
+      clientIdSetting: 'twitchClientId',
+      clientSecretSetting: 'twitchClientSecret',
+    },
+    // youtube: {
+    //   enabled: false,
+    //   name: 'YouTube',
+    //   authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    //   tokenUrl: '',
+    //   userInfoUrl: '',
+    //   userApiUrl: '',
+    //   clientIdSetting: 'youtubeClientId',
+    //   clientSecretSetting: 'youtubeClientSecret',
+    // },
+    // x: {
+    //   enabled: false,
+    //   name: 'X (Twitter)',
+    //   authUrl: 'https://id.twitch.tv/oauth2/authorize',
+    //   tokenUrl: '',
+    //   userInfoUrl: '',
+    //   userApiUrl: '',
+    //   clientIdSetting: 'xClientId',
+    //   clientSecretSetting: 'xClientSecret',
+    // },
+  };
+
+  // Clean up expired state tokens every 5 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of Object.entries(state_tokens)) {
+      if (value.created + 1000 * 60 * 5 < now) {
+        delete state_tokens[key];
+      }
+    }
+  }, 1000 * 60 * 5);
+
   // Auth functions
   router.get('/auth/twitch', async (req, res) => {
 
-    st = token(48);
+    const st = token(48);
     state_tokens[st] = {
       "created": Date.now(),
       "video": req.headers.referer
@@ -168,7 +196,7 @@ async function register({
 
 //  router.get('/auth/youtube', async (req, res) => {
 //  
-//    st = token(48);
+//    const st = token(48);
 //    state_tokens[st] = Date.now();
 //
 //    res.redirect("https://accounts.google.com/o/oauth2/v2/auth?" + [
@@ -182,7 +210,7 @@ async function register({
 //
 //  router.get('/auth/x', async (req, res) => {
 //
-//    st = token(48);
+//    const st = token(48);
 //    state_tokens[st] = Date.now();
 //
 //    res.redirect("https://id.twitch.tv/oauth2/authorize?" + [
@@ -239,7 +267,7 @@ async function register({
     }
     catch (error)
     {
-      console.log(error);
+      peertubeHelpers.logger.error(error);
       try
       {
         res.redirect(redirect + "?failed=true");

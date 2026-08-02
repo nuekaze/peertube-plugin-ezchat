@@ -1,8 +1,6 @@
 const crypto = require("crypto");
 const axios = require("axios");
 
-// Also LLM converted file from Python to JavaScript. It still works which is amazing.
-
 // Activity template
 const activityTemplate = {
   '@context': ['https://www.w3.org/ns/activitystreams'],
@@ -57,7 +55,7 @@ function createSigningHeaders(method, server, url, keyId, body, additionalHeader
 }
 
 async function sendOtpMessage(user, server, serverActor, serverUrl, code, logger) {
-  const activity = { ...activityTemplate };
+  const activity = JSON.parse(JSON.stringify(activityTemplate));
 
   // Step 1: Lookup the user's WebFinger
   const webfingerUrl = `https://${server}/.well-known/webfinger?resource=acct:${user}@${server}`;
