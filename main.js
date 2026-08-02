@@ -142,7 +142,17 @@ async function register({
   // Admin: list and manage emotes
   router.get('/admin/emotes', async (req, res) => {
     if (!(await isAdminUser(req, res))) {
-      res.status(403).send('<h1>Forbidden</h1><p>Admin access required.</p>');
+      res.status(403).send(`<!DOCTYPE html><html><head><title>Forbidden</title></head><body>
+<h1>Forbidden</h1>
+<p>Admin access required. To authenticate:</p>
+<ol>
+  <li>Open a livestream on this instance</li>
+  <li>Join the chat (log in with Fediverse or Twitch)</li>
+  <li>Click the ⚙️ settings gear in chat</li>
+  <li>Click "Emote Manager"</li>
+</ol>
+<p><a href="${baseroute}/admin/emotes">Retry with token</a></p>
+</body></html>`);
       return;
     }
 
@@ -376,6 +386,14 @@ async function register({
 
   // Register and start the chat server.
   chat.createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, peertubeHelpers.logger, () => emoteMap);
+
+  registerSetting({
+    name: 'emoteManager',
+    label: 'Emote Manager',
+    type: 'html',
+    descriptionHTML: '<a href="' + baseroute + '/admin/emotes" target="_blank">Open Emote Manager</a> — Upload and manage custom chat emotes. You must be logged into chat first to authenticate.',
+    private: false
+  });
 
   // Twitch auth
   registerSetting({
