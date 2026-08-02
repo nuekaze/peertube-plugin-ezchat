@@ -143,6 +143,7 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
         {
             const msgEl = el.messages.querySelector('[data-message-id="' + data.messageId + '"]');
             if (msgEl) msgEl.remove();
+            return;
         }
         else if (data.type == "USER_TIMEOUTED")
         {
