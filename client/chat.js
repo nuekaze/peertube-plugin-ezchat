@@ -139,6 +139,43 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
             username.after(": " + data.content);
             username.before(badge);
         }
+        else if (data.type == "MESSAGE_DELETED")
+        {
+            const msgEl = el.messages.querySelector('[data-message-id="' + data.messageId + '"]');
+            if (msgEl) msgEl.remove();
+        }
+        else if (data.type == "USER_TIMEOUTED")
+        {
+            message.className = "peertube-plugin-chat-system";
+            message.textContent = data.actor + " has been timed out for " + data.duration + " seconds.";
+        }
+        else if (data.type == "USER_BANNED")
+        {
+            message.className = "peertube-plugin-chat-system";
+            message.textContent = data.actor + " has been banned.";
+        }
+        else if (data.type == "USER_UNBANNED")
+        {
+            message.className = "peertube-plugin-chat-system";
+            message.textContent = data.actor + " has been unbanned.";
+        }
+        else if (data.type == "MOD_ASSIGNED")
+        {
+            message.className = "peertube-plugin-chat-system";
+            message.textContent = data.actor + " is now a moderator.";
+            if (data.actor === localActor) isLocalMod = true;
+        }
+        else if (data.type == "MOD_UNASSIGNED")
+        {
+            message.className = "peertube-plugin-chat-system";
+            message.textContent = data.actor + " is no longer a moderator.";
+            if (data.actor === localActor) isLocalMod = false;
+        }
+        else if (data.type == "ERROR")
+        {
+            message.className = "peertube-plugin-chat-system";
+            message.textContent = "System: " + data.message;
+        }
 
         el.messages.appendChild(message);
         el.messages.scrollTop = el.messages.scrollHeight;
