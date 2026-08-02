@@ -8,21 +8,29 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
             <h1>EZChat Emote Manager</h1>
             <div class="ezchat-emote-manager-messages"></div>
             <h2>Upload Emotes</h2>
-            <div class="ezchat-emote-manager-drop-zone">Drop images here or click to select</div>
+            <div class="ezchat-emote-manager-drop-zone">
+                <strong>Drop image files here</strong>
+                <span>or</span>
+                <button type="button" class="btn btn-primary ezchat-emote-manager-choose">Choose files</button>
+                <small>PNG, GIF, or WebP. Maximum 1 MB per file.</small>
+            </div>
             <input type="file" class="ezchat-emote-manager-file-input" multiple accept=".png,.gif,.webp" hidden />
+            <div class="ezchat-emote-manager-file-status" aria-live="polite"></div>
             <h2>Emotes</h2>
             <form class="ezchat-emote-manager-form">
                 <table>
                     <thead><tr><th>Preview</th><th>Code Name</th><th>Action</th></tr></thead>
                     <tbody class="ezchat-emote-manager-table"></tbody>
                 </table>
-                <button type="submit">Save Emotes</button>
+                <button type="submit" class="btn btn-primary">Save Emotes</button>
             </form>
         </div>`;
 
     const messages = rootEl.querySelector('.ezchat-emote-manager-messages');
     const dropZone = rootEl.querySelector('.ezchat-emote-manager-drop-zone');
+    const chooseButton = rootEl.querySelector('.ezchat-emote-manager-choose');
     const fileInput = rootEl.querySelector('.ezchat-emote-manager-file-input');
+    const fileStatus = rootEl.querySelector('.ezchat-emote-manager-file-status');
     const form = rootEl.querySelector('.ezchat-emote-manager-form');
     const tbody = rootEl.querySelector('.ezchat-emote-manager-table');
 
@@ -35,6 +43,12 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
         messages.className = 'ezchat-emote-manager-messages ' + type;
     }
 
+    function selectFiles(files) {
+        if (!files.length) return;
+        fileStatus.textContent = files.length + ' file(s) selected';
+        uploadFiles(files).catch(error => showMessage(error.message, 'error'));
+    }
+
     function imageUrl(filename) {
         return imageBase + '/emotes/' + encodeURIComponent(filename);
     }
@@ -44,8 +58,8 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
         Object.entries(emotes).forEach(([code, filename]) => {
             const row = document.createElement('tr');
             row.innerHTML = '<td><img style="height:32px;width:32px;object-fit:contain" /></td>' +
-                '<td><input type="text" class="emote-code" /></td>' +
-                '<td><button type="button" class="delete-emote">Delete</button></td>';
+                '<td><input type="text" class="form-control emote-code" /></td>' +
+                '<td><button type="button" class="btn delete-emote">Delete</button></td>';
             row.querySelector('img').src = imageUrl(filename);
             row.querySelector('.emote-code').value = code;
             row.querySelector('.emote-code').dataset.filename = filename;
@@ -77,8 +91,8 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
         data.files.forEach(file => {
             const row = document.createElement('tr');
             row.innerHTML = '<td><img style="height:32px;width:32px;object-fit:contain" /></td>' +
-                '<td><input type="text" class="emote-code" /></td>' +
-                '<td><button type="button" class="delete-emote">Delete</button></td>';
+                '<td><input type="text" class="form-control emote-code" /></td>' +
+                '<td><button type="button" class="btn delete-emote">Delete</button></td>';
             row.querySelector('img').src = imageUrl(file.filename);
             row.querySelector('.emote-code').value = file.name;
             row.querySelector('.emote-code').dataset.filename = file.filename;
@@ -91,6 +105,10 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
     }
 
     dropZone.addEventListener('click', () => fileInput.click());
+    chooseButton.addEventListener('click', event => {
+        event.stopPropagation();
+        fileInput.click();
+    });
     dropZone.addEventListener('dragover', event => {
         event.preventDefault();
         dropZone.classList.add('dragover');
@@ -99,12 +117,10 @@ function mountEmoteManager(rootEl, peertubeHelpers) {
     dropZone.addEventListener('drop', event => {
         event.preventDefault();
         dropZone.classList.remove('dragover');
-        if (event.dataTransfer.files.length) uploadFiles(event.dataTransfer.files)
-            .catch(error => showMessage(error.message, 'error'));
+        selectFiles(event.dataTransfer.files);
     });
     fileInput.addEventListener('change', () => {
-        if (fileInput.files.length) uploadFiles(fileInput.files)
-            .catch(error => showMessage(error.message, 'error'));
+        selectFiles(fileInput.files);
     });
 
     tbody.addEventListener('click', async event => {

@@ -72,6 +72,93 @@
     object-fit: contain;
 }
 
+.ezchat-emote-manager {
+    box-sizing: border-box;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+    color: var(--mainForegroundColor, var(--fg, #222));
+    background: var(--mainBackgroundColor, var(--bg, #fff));
+}
+.ezchat-emote-manager h1,
+.ezchat-emote-manager h2 {
+    color: inherit;
+}
+.ezchat-emote-manager h1 {
+    margin: 0 0 1.5rem;
+}
+.ezchat-emote-manager h2 {
+    margin: 1.75rem 0 0.75rem;
+}
+.ezchat-emote-manager-messages {
+    min-height: 1.5em;
+    margin: 0.75rem 0;
+}
+.ezchat-emote-manager-messages.success {
+    color: var(--success, #287a3d);
+}
+.ezchat-emote-manager-messages.error {
+    color: var(--danger, #b42318);
+}
+.ezchat-emote-manager-drop-zone {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 1.5rem;
+    border: 2px dashed var(--border-primary, #aaa);
+    border-radius: 0.35rem;
+    background: var(--bg-secondary, rgba(127, 127, 127, 0.08));
+    text-align: center;
+}
+.ezchat-emote-manager-drop-zone strong {
+    width: 100%;
+}
+.ezchat-emote-manager-drop-zone span {
+    opacity: 0.7;
+}
+.ezchat-emote-manager-drop-zone small {
+    width: 100%;
+    opacity: 0.7;
+}
+.ezchat-emote-manager-drop-zone.dragover {
+    border-color: var(--primary, #4d76ff);
+    background: var(--bg-secondary-450, rgba(77, 118, 255, 0.12));
+}
+.ezchat-emote-manager-file-status {
+    min-height: 1.5em;
+    margin-top: 0.5rem;
+    opacity: 0.75;
+}
+.ezchat-emote-manager table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.ezchat-emote-manager th,
+.ezchat-emote-manager td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-secondary, rgba(127, 127, 127, 0.35));
+    text-align: left;
+}
+.ezchat-emote-manager th {
+    background: var(--bg-secondary, rgba(127, 127, 127, 0.08));
+}
+.ezchat-emote-manager .emote-code {
+    width: min(20rem, 100%);
+}
+.ezchat-emote-manager table img {
+    display: block;
+    width: 2rem;
+    height: 2rem;
+    object-fit: contain;
+}
+.ezchat-emote-manager .delete-emote {
+    color: var(--danger, #b42318);
+}
+.ezchat-emote-manager-form > button {
+    margin-top: 1rem;
+}
+
 @media screen and (max-width: 1100px) {
     #peertube-plugin-chat-container {
         position: relative;
@@ -80,5 +167,9 @@
     }
     #peertube-plugin-chat-user-area {
         width: inherit;
+    }
+
+    .ezchat-emote-manager {
+        padding: 1rem;
     }
 }

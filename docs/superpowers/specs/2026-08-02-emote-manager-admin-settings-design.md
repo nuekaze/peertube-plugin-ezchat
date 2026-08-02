@@ -40,6 +40,13 @@ Provide one reliable entry point for editing custom chat emotes. Instance admini
 
 No emote-manager operation depends on the WebSocket connection, room ownership, chat authentication, or a query-string token.
 
+## Manager UI
+
+- Use PeerTube-native theme variables and existing `btn`/`form-control` classes.
+- Provide a visible `Choose files` button in addition to drag-and-drop.
+- Display selected-file status and accepted file constraints near the upload control.
+- Keep the emote table readable with theme-aware borders, spacing, previews, and explicit Delete buttons.
+
 ## Error Handling
 
 - Unauthenticated and non-administrator requests are rejected with `403`.
