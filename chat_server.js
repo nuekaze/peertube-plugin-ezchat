@@ -252,7 +252,7 @@ function onConnection(ws, serverActor, serverUrl, logger) {
       rooms[room].clients.forEach((c) => c.send(JSON.stringify({
         type: 'USER_TIMEOUTED',
         actor: m.targetActor,
-        duration: m.duration
+        duration: duration
       })));
     } else if (m.type === 'BAN_USER') {
       if (!users[m.token]) {
@@ -300,6 +300,7 @@ function onConnection(ws, serverActor, serverUrl, logger) {
         return;
       }
       rooms[room].banned = rooms[room].banned.filter(a => a !== m.targetActor);
+      bans[room] = rooms[room].banned;
       rooms[room].clients.forEach((c) => c.send(JSON.stringify({
         type: 'USER_UNBANNED',
         actor: m.targetActor
