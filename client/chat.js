@@ -147,7 +147,11 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
 
             message.appendChild(username);
             username.after(": ");
-            const rendered = data.content.replace(/:([\w]+):/g, (match, code) => {
+            const escaped = data.content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            const rendered = escaped.replace(/:([\w]+):/g, (match, code) => {
                 const filename = emoteMap[code];
                 return filename
                     ? `<img src="${emoteImageBase}/${filename}" class="peertube-plugin-chat-emote" title="${code}" alt=":${code}:" />`
