@@ -37,7 +37,7 @@ async function saveChatState(storageManager)
 
 
 
-function onConnection(ws, serverActor, serverUrl, logger) {
+function onConnection(ws, serverActor, serverUrl, logger, getEmoteMap) {
   ws.on('message', async (message) => {
     const m = JSON.parse(message);
     logger.debug(JSON.stringify(m, null, 2));
@@ -137,6 +137,8 @@ function onConnection(ws, serverActor, serverUrl, logger) {
       } else {
         r.is_authenticated = 0;
       }
+
+      r.emotes = getEmoteMap();
 
       ws.send(JSON.stringify(r));
     } else if (m.type === 'UPDATE_SETTINGS') {
@@ -373,10 +375,10 @@ function addUser(user, url, token)
   }
 }
 
-function createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, logger) {
+function createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, logger, getEmoteMap) {
   const wss = new WebSocket.Server({ noServer: true });
   wss.on('connection', (ws) => {
-    onConnection(ws, serverActor, serverUrl, logger);
+    onConnection(ws, serverActor, serverUrl, logger, getEmoteMap);
   });
 
   registerWebSocketRoute({

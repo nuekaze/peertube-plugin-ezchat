@@ -338,7 +338,7 @@ async function register({
   });
 
   // Register and start the chat server.
-  chat.createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, peertubeHelpers.logger);
+  chat.createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, peertubeHelpers.logger, () => emoteMap);
 
   // Twitch auth
   registerSetting({
