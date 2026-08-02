@@ -7,9 +7,6 @@ const main_html = `<div id="peertube-plugin-chat-messages"></div>
         <input class="form-control" id="peertube-plugin-chat-color" type="text" value="" />
         <button class="btn" id="peertube-plugin-chat-update-settings">Update</button>
         <button class="btn" id="peertube-plugin-chat-log-out">Log out</button>
-        <div id="peertube-plugin-chat-admin-links" style="display: none; margin-top: 8px; border-top: 1px solid #555; padding-top: 8px;">
-            <a id="peertube-plugin-chat-emote-manager-link" href="#" target="_blank" class="btn">Emote Manager</a>
-        </div>
     </div>
     <div id="peertube-plugin-chat-message-area" style="display: none;">
         <input class="form-control" type="text" id="peertube-plugin-chat-message-input" placeholder="Say something here..." />

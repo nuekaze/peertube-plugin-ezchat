@@ -1,7 +1,15 @@
 import { launchChat } from "./chat.js";
 
-function register ({ registerHook, peertubeHelpers })
+function register ({ registerHook, registerSettingsScript, peertubeHelpers })
 {
+    registerSettingsScript({
+        isSettingHidden: ({ setting }) => {
+            if (setting.name !== "emoteManager") return false;
+            const user = peertubeHelpers.getUser();
+            return !user || user.role !== 0;
+        }
+    });
+
     registerHook({
         target: "action:video-watch.video.loaded",
         handler: ({ video }) => {

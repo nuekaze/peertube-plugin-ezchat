@@ -363,15 +363,14 @@ function onConnection(ws, serverActor, serverUrl, logger, getEmoteMap) {
   });
 }
 
-function addUser(user, url, token, peerTubeUserId)
+function addUser(user, url, token)
 {
   if (!(token in users))
   {
     users[token] = {
       display_name: user,
       actor: url,
-      color: "#" + token.substring(0, 6),
-      peerTubeUserId: peerTubeUserId || null
+      color: "#" + token.substring(0, 6)
     };
   }
 }
@@ -392,11 +391,6 @@ function createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, l
   });
 
   return wss;
-}
-
-function getUserByToken(token)
-{
-  return users[token] || null;
 }
 
 function addModToRoom(token, room, isMod, isOwner)
@@ -429,10 +423,8 @@ function addModToRoom(token, room, isMod, isOwner)
 module.exports = {
   onConnection,
   addUser,
-  getUserByToken,
   initChat,
   saveChatState,
   addModToRoom,
   createWebSocketServer
 };
-

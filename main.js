@@ -20,7 +20,7 @@ async function register({
   settingsManager,
   getRouter
 }) {
-  
+
   const serverActor = await peertubeHelpers.server.getServerActor();
   const serverUrl = await peertubeHelpers.config.getWebserverUrl();
   const baseroute = await peertubeHelpers.plugin.getBaseRouterRoute();
@@ -79,21 +79,10 @@ async function register({
   async function isAdminUser(req, res) {
     try {
       const user = await peertubeHelpers.user.getAuthUser(res);
-      if (user && user.role >= 2) return true;
-    } catch {}
-
-    // Fallback: check chat token from query parameter
-    const chatToken = req.query.token;
-    if (chatToken) {
-      const chatUser = chat.getUserByToken(chatToken);
-      if (chatUser && chatUser.peerTubeUserId) {
-        try {
-          const user = await peertubeHelpers.user.loadById(chatUser.peerTubeUserId);
-          return user && user.role >= 2;
-        } catch {}
-      }
+      return Boolean(user && user.role === 0);
+    } catch {
+      return false;
     }
-    return false;
   }
 
   await chat.initChat(storageManager);
@@ -112,7 +101,7 @@ async function register({
     if (user)
     {
       const token = crypto.createHash('sha256').update(user.username + serverActor.privateKey).digest('hex');
-      chat.addUser(user.Account.name, user.Account.Actor.url, token, user.id);
+      chat.addUser(user.Account.name, user.Account.Actor.url, token);
 
       res.json({
         token: token
@@ -144,14 +133,7 @@ async function register({
     if (!(await isAdminUser(req, res))) {
       res.status(403).send(`<!DOCTYPE html><html><head><title>Forbidden</title></head><body>
 <h1>Forbidden</h1>
-<p>Admin access required. To authenticate:</p>
-<ol>
-  <li>Open a livestream on this instance</li>
-  <li>Join the chat (log in with Fediverse or Twitch)</li>
-  <li>Click the ⚙️ settings gear in chat</li>
-  <li>Click "Emote Manager"</li>
-</ol>
-<p><a href="${baseroute}/admin/emotes">Retry with token</a></p>
+<p>Instance administrator access required.</p>
 </body></html>`);
       return;
     }
@@ -199,8 +181,6 @@ async function register({
   </form>
 
   <script>
-  const chatToken = new URLSearchParams(window.location.search).get('token') || '';
-  const tokenParam = chatToken ? '?token=' + encodeURIComponent(chatToken) : '';
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const messages = document.getElementById('messages');
@@ -219,7 +199,7 @@ async function register({
   function uploadFiles(files) {
     const formData = new FormData();
     for (const f of files) formData.append('emotes', f);
-    fetch('upload' + tokenParam, { method: 'POST', body: formData })
+    fetch('${baseroute}/admin/emotes/upload', { method: 'POST', body: formData })
       .then(r => r.json())
       .then(data => {
         if (data.error) { showMessage(data.error, 'error'); return; }
@@ -240,7 +220,7 @@ async function register({
   tbody.addEventListener('click', (e) => {
     if (e.target.classList.contains('delete-emote')) {
       const filename = e.target.dataset.filename;
-      fetch('delete' + tokenParam, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({filename}) })
+      fetch('${baseroute}/admin/emotes/delete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({filename}) })
         .then(r => r.json())
         .then(data => {
           if (data.error) { showMessage(data.error, 'error'); return; }
@@ -259,7 +239,7 @@ async function register({
       const code = input.value.trim();
       if (code) emotes.push({ code, filename: input.dataset.filename });
     });
-    fetch('save' + tokenParam, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({emotes}) })
+    fetch('${baseroute}/admin/emotes/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({emotes}) })
       .then(r => r.json())
       .then(data => {
         if (data.error) { showMessage(data.error, 'error'); return; }
@@ -391,7 +371,7 @@ async function register({
     name: 'emoteManager',
     label: 'Emote Manager',
     type: 'html',
-    descriptionHTML: '<a href="' + baseroute + '/admin/emotes" target="_blank">Open Emote Manager</a> — Upload and manage custom chat emotes. You must be logged into chat first to authenticate.',
+    descriptionHTML: '<a href="' + baseroute + '/admin/emotes" target="_blank">Open Emote Manager</a> — Upload and manage custom chat emotes. For instance administrators.',
     private: false
   });
 
@@ -615,4 +595,3 @@ module.exports = {
   register,
   unregister,
 };
-
