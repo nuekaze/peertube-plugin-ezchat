@@ -124,9 +124,11 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
         }
         else if (data.type == "MESSAGE")
         {
+            message.setAttribute("data-message-id", data.messageId);
             username.href = data.actor;
             username.style = "text-decoration: none; color: " + data.color + ";";
             username.textContent = data.display_name;
+            username.setAttribute("data-actor", data.actor);
 
             if (data.isOwner)
                 badge.textContent = "🎥 ";

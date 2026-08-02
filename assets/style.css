@@ -17,6 +17,12 @@
     bottom: 0;
 }
 
+.peertube-plugin-chat-system {
+    font-style: italic;
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
 @media screen and (max-width: 1100px) {
     #peertube-plugin-chat-container {
         position: relative;
