@@ -42,6 +42,36 @@
     vertical-align: middle;
 }
 
+.peertube-plugin-chat-emote-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: var(--mainBackgroundColor, #222);
+    border: 1px solid #555;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+.peertube-plugin-chat-emote-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: var(--mainForegroundColor, #fff);
+}
+.peertube-plugin-chat-emote-picker-item:hover,
+.peertube-plugin-chat-emote-picker-item.selected {
+    background: #444;
+}
+.peertube-plugin-chat-emote-picker-item img {
+    height: 24px;
+    width: 24px;
+    object-fit: contain;
+}
+
 @media screen and (max-width: 1100px) {
     #peertube-plugin-chat-container {
         position: relative;

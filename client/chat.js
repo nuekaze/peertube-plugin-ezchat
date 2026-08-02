@@ -39,11 +39,20 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     if (!settings.twitchClientId)
         el.authTwitch.style.display = "none";
 
+    const emotePicker = document.createElement("div");
+    emotePicker.className = "peertube-plugin-chat-emote-picker";
+    emotePicker.style.display = "none";
+    el.messageInput.parentNode.style.position = "relative";
+    el.messageInput.parentNode.appendChild(emotePicker);
+
     let isLocalMod = false;
     let isLocalOwner = false;
     let localActor = "";
     let emoteMap = {};
     const emoteImageBase = baseroute + '/emotes';
+    let emotePickerVisible = false;
+    let emotePickerSelectedIndex = -1;
+    let emotePickerResults = [];
 
     const ws = new WebSocket(chat_server);
 
@@ -153,9 +162,7 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
                 .replace(/>/g, '&gt;');
             const rendered = escaped.replace(/:([\w]+):/g, (match, code) => {
                 const filename = emoteMap[code];
-                return filename
-                    ? `<img src="${emoteImageBase}/${filename}" class="peertube-plugin-chat-emote" title="${code}" alt=":${code}:" />`
-                    : match;
+                return filename ? `<img src="${emoteImageBase}/${filename}" class="peertube-plugin-chat-emote" title="${code}" alt=":${code}:" />` : match;
             });
             username.insertAdjacentHTML("afterend", rendered);
             username.before(badge);
@@ -343,6 +350,60 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
         ws.send(JSON.stringify(payload));
     }
 
+    function renderEmotePicker(matches, prefix) {
+        emotePicker.innerHTML = "";
+        matches.forEach((code, index) => {
+            const item = document.createElement("div");
+            item.className = "peertube-plugin-chat-emote-picker-item";
+            if (index === emotePickerSelectedIndex) item.classList.add("selected");
+            const filename = emoteMap[code];
+            item.innerHTML = `<img src="${emoteImageBase}/${filename}" /> ${code}`;
+            item.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                insertSelectedEmote(code);
+            });
+            item.addEventListener("mouseenter", () => {
+                emotePickerSelectedIndex = index;
+                highlightEmotePickerItem();
+            });
+            emotePicker.appendChild(item);
+        });
+        emotePicker.style.display = "block";
+        emotePickerVisible = true;
+    }
+
+    function highlightEmotePickerItem() {
+        const items = emotePicker.querySelectorAll(".peertube-plugin-chat-emote-picker-item");
+        items.forEach((item, index) => {
+            item.classList.toggle("selected", index === emotePickerSelectedIndex);
+        });
+        if (emotePickerSelectedIndex >= 0 && items[emotePickerSelectedIndex]) {
+            items[emotePickerSelectedIndex].scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function insertSelectedEmote(code) {
+        const text = el.messageInput.value;
+        const cursorPos = el.messageInput.selectionStart;
+        const beforeCursor = text.slice(0, cursorPos);
+        const afterCursor = text.slice(cursorPos);
+
+        const colonIndex = beforeCursor.lastIndexOf(":");
+        const newText = beforeCursor.slice(0, colonIndex) + ":" + code + ": " + afterCursor;
+        el.messageInput.value = newText;
+        const newPos = colonIndex + code.length + 3;
+        el.messageInput.setSelectionRange(newPos, newPos);
+        hideEmotePicker();
+        el.messageInput.focus();
+    }
+
+    function hideEmotePicker() {
+        emotePicker.style.display = "none";
+        emotePickerVisible = false;
+        emotePickerSelectedIndex = -1;
+        emotePickerResults = [];
+    }
+
     function sendMessage()
     {
         ws.send(JSON.stringify({
@@ -366,9 +427,69 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     }
 
     el.messageSend.addEventListener("click", sendMessage);
-    el.messageInput.addEventListener("keypress", (event) => {
-        if (event.key == "Enter" && el.messageInput.value != "")
+    el.messageInput.addEventListener("keydown", (event) => {
+        if (emotePickerVisible) {
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                emotePickerSelectedIndex = Math.min(emotePickerSelectedIndex + 1, emotePickerResults.length - 1);
+                highlightEmotePickerItem();
+                return;
+            }
+            if (event.key === "ArrowUp") {
+                event.preventDefault();
+                emotePickerSelectedIndex = Math.max(emotePickerSelectedIndex - 1, -1);
+                highlightEmotePickerItem();
+                return;
+            }
+            if (event.key === "Enter" || event.key === "Tab") {
+                if (emotePickerSelectedIndex >= 0 && emotePickerSelectedIndex < emotePickerResults.length) {
+                    event.preventDefault();
+                    insertSelectedEmote(emotePickerResults[emotePickerSelectedIndex]);
+                    return;
+                }
+            }
+            if (event.key === "Escape") {
+                hideEmotePicker();
+                return;
+            }
+        }
+        if (event.key === "Enter" && el.messageInput.value != "")
             el.messageSend.click();
+    });
+
+    el.messageInput.addEventListener("input", () => {
+        const text = el.messageInput.value;
+        const cursorPos = el.messageInput.selectionStart;
+        const beforeCursor = text.slice(0, cursorPos);
+
+        const colonIndex = beforeCursor.lastIndexOf(":");
+        if (colonIndex === -1 || colonIndex === cursorPos - 1) {
+            hideEmotePicker();
+            return;
+        }
+
+        const prefix = beforeCursor.slice(colonIndex + 1);
+        if (!prefix || prefix.length > 20 || /[^a-zA-Z0-9_]/.test(prefix)) {
+            hideEmotePicker();
+            return;
+        }
+
+        const matches = Object.keys(emoteMap)
+            .filter(code => code.toLowerCase().startsWith(prefix.toLowerCase()))
+            .slice(0, 20);
+
+        if (matches.length === 0) {
+            hideEmotePicker();
+            return;
+        }
+
+        emotePickerResults = matches;
+        emotePickerSelectedIndex = -1;
+        renderEmotePicker(matches, prefix);
+    });
+
+    el.messageInput.addEventListener("blur", () => {
+        setTimeout(hideEmotePicker, 200);
     });
 
     el.updateSettings.addEventListener("click", updateSettings);
