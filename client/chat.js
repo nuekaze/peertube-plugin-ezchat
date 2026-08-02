@@ -42,6 +42,8 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
     let isLocalMod = false;
     let isLocalOwner = false;
     let localActor = "";
+    let emoteMap = {};
+    const emoteImageBase = baseroute + '/emotes';
 
     const ws = new WebSocket(chat_server);
 
@@ -103,6 +105,7 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
         {
             if (data.status == 0)
             {
+                if (data.emotes) emoteMap = data.emotes;
                 if (data.is_authenticated == 1)
                 {
                     el.displayName.value = data.display_name;
@@ -143,7 +146,14 @@ async function launchChat(video, placeholder, user, token, baseroute, settings, 
                 badge.textContent = "🔨 ";
 
             message.appendChild(username);
-            username.after(": " + data.content);
+            username.after(": ");
+            const rendered = data.content.replace(/:([\w]+):/g, (match, code) => {
+                const filename = emoteMap[code];
+                return filename
+                    ? `<img src="${emoteImageBase}/${filename}" class="peertube-plugin-chat-emote" title="${code}" alt=":${code}:" />`
+                    : match;
+            });
+            username.insertAdjacentHTML("afterend", rendered);
             username.before(badge);
 
             const localToken = window.localStorage.getItem("peertubePluginChatToken");

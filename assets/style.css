@@ -37,6 +37,11 @@
     font-size: 0.9em;
 }
 
+.peertube-plugin-chat-emote {
+    height: 1.5em;
+    vertical-align: middle;
+}
+
 @media screen and (max-width: 1100px) {
     #peertube-plugin-chat-container {
         position: relative;
