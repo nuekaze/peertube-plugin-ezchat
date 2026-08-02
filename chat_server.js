@@ -28,15 +28,41 @@ function onConnection(ws, serverActor, serverUrl, logger) {
     const { room } = m;
 
     if (!rooms[room]) {
-      rooms[room] = { clients: new Set(), users: [], owner: "", mods: []};
+      rooms[room] = {
+        clients: new Set(),
+        users: [],
+        owner: "",
+        mods: [],
+        nextMessageId: 0,
+        messages: [],
+        tokenByActor: {},
+        timeouts: {},
+        banned: []
+      };
     }
 
     if (m.type === 'MESSAGE') {
       if (users[m.token]) {
+        const actor = users[m.token].actor;
+
+        // Check bans
+        if (rooms[room].banned.includes(actor)) {
+          ws.send(JSON.stringify({ type: 'ERROR', message: 'You are banned from this chat.' }));
+          return;
+        }
+
+        // Check timeouts
+        if (rooms[room].timeouts[actor] && rooms[room].timeouts[actor] > Date.now()) {
+          ws.send(JSON.stringify({ type: 'ERROR', message: 'You are timed out from this chat.' }));
+          return;
+        }
+
+        const messageId = rooms[room].nextMessageId++;
         const r = {
           type: 'MESSAGE',
+          messageId: messageId,
           color: users[m.token].color,
-          actor: users[m.token].actor,
+          actor: actor,
           display_name: users[m.token].display_name,
           content: m.content,
           isOwner: false,
@@ -51,6 +77,22 @@ function onConnection(ws, serverActor, serverUrl, logger) {
         {
           r.isMod = true;
         }
+
+        // Store in rolling buffer
+        rooms[room].messages.unshift({
+          id: messageId,
+          token: m.token,
+          actor: actor,
+          display_name: users[m.token].display_name,
+          color: users[m.token].color,
+          content: m.content
+        });
+        if (rooms[room].messages.length > 200) {
+          rooms[room].messages.pop();
+        }
+
+        // Update reverse lookup
+        rooms[room].tokenByActor[actor] = m.token;
 
         rooms[room].clients.forEach((c) => c.send(JSON.stringify(r)));
       }
@@ -177,7 +219,17 @@ function createWebSocketServer(registerWebSocketRoute, serverActor, serverUrl, l
 function addModToRoom(token, room, isMod, isOwner)
 {
   if (!rooms[room]) {
-    rooms[room] = { clients: new Set(), users: [], owner: "", mods: []};
+    rooms[room] = {
+      clients: new Set(),
+      users: [],
+      owner: "",
+      mods: [],
+      nextMessageId: 0,
+      messages: [],
+      tokenByActor: {},
+      timeouts: {},
+      banned: []
+    };
   }
   
   if (isOwner)
