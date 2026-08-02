@@ -38,6 +38,7 @@
   "dependencies": {
     "@peertube/peertube-cli": "^1.0.3",
     "axios": "^1.7.9",
+    "multer": "^2.2.0",
     "ws": "^8.18.0"
   }
 }

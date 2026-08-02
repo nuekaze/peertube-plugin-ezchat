@@ -1,5 +1,8 @@
 const crypto = require('crypto');
 const axios = require("axios");
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const chat = require('./chat_server.js');
 // OID Configs
 let twitch = null;
@@ -21,6 +24,38 @@ async function register({
   const serverActor = await peertubeHelpers.server.getServerActor();
   const serverUrl = await peertubeHelpers.config.getWebserverUrl();
   const baseroute = await peertubeHelpers.plugin.getBaseRouterRoute();
+
+  const emotesDir = path.join(await peertubeHelpers.plugin.getDataDirectoryPath(), 'emotes');
+  if (!fs.existsSync(emotesDir)) {
+    fs.mkdirSync(emotesDir, { recursive: true });
+  }
+
+  let emoteMap = {};
+  const storedEmotes = await storageManager.getData("ezchat_emotes");
+  if (storedEmotes) {
+    emoteMap = storedEmotes;
+  }
+
+  const emoteUpload = multer({
+    storage: multer.diskStorage({
+      destination: emotesDir,
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const name = crypto.randomUUID() + ext;
+        cb(null, name);
+      }
+    }),
+    fileFilter: (req, file, cb) => {
+      const allowed = ['.png', '.gif', '.webp'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (!allowed.includes(ext)) {
+        cb(new Error('Only PNG, GIF, and WebP files are allowed.'));
+        return;
+      }
+      cb(null, true);
+    },
+    limits: { fileSize: 1 * 1024 * 1024 }
+  });
 
   await chat.initChat(storageManager);
 
@@ -50,6 +85,19 @@ async function register({
         token: ""
       });
     }
+  });
+
+  // Serve emote images
+  router.get('/emotes/:filename', (req, res) => {
+    const filePath = path.join(emotesDir, path.basename(req.params.filename));
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: 'Emote not found' });
+      return;
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes = { '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp' };
+    res.type(mimeTypes[ext] || 'application/octet-stream');
+    fs.createReadStream(filePath).pipe(res);
   });
 
   router.get('/setprivs', async (req, res) => {
